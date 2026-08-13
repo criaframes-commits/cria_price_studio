@@ -138,6 +138,8 @@ h1 em { color:var(--blue); font-style:normal; }
 .tech-logo.claude { background:#c96f4a; }
 .tech-logo.food { background:#237044; }
 .tech-item.is-disabled { opacity:.55; background:#f3f4f6; }
+.model-selector { border:1px solid #c7d2ef; background:var(--blue-soft); padding:17px; margin:14px 0 10px; }
+.model-selector select { background:white; }
 .model-policy { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0 10px; }
 .model-card { border:1px solid var(--line); padding:20px; }
 .model-card>span { color:var(--blue); font-size:8px; font-weight:800; letter-spacing:.1em; }

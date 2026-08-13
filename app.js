@@ -24,6 +24,7 @@ const state = {
   realism: 'hybrid',
   quality: 'high',
   freedom: 'balanced',
+  modelStrategy: 'auto',
   complexityOverride: 'auto',
   higgsExtra: 150,
   fx: 5.2,
@@ -57,6 +58,7 @@ if (!state.deliveryDate || !/^\d{4}-\d{2}-\d{2}$/.test(state.deliveryDate)) stat
 if (!['animation', 'hybrid', 'photoreal'].includes(state.realism)) state.realism = 'hybrid';
 if (!['standard', 'high', 'cinema'].includes(state.quality)) state.quality = 'high';
 if (!['flexible', 'balanced', 'strict'].includes(state.freedom)) state.freedom = 'balanced';
+if (!['auto', 'seedance20', 'mixed', 'seedance25'].includes(state.modelStrategy)) state.modelStrategy = 'auto';
 if (!['auto', 'low', 'medium', 'high'].includes(state.complexityOverride)) state.complexityOverride = 'auto';
 
 function profileProject() {
@@ -80,9 +82,10 @@ function profileProject() {
   const baseAttempts = { low: 2, medium: 3, high: 4 }[complexity];
   const attempts = Math.max(1, baseAttempts + (state.freedom === 'strict' ? 1 : state.freedom === 'flexible' ? -1 : 0));
   const requestedResolution = { standard: '720p', high: '1080p', cinema: '4K' }[state.quality];
-  let modelStrategy = 'mixed';
-  if (state.realism === 'photoreal' || state.freedom === 'strict') modelStrategy = 'seedance25';
-  if (state.realism === 'animation' || state.freedom === 'flexible') modelStrategy = 'seedance20';
+  let automaticModelStrategy = 'mixed';
+  if (state.realism === 'photoreal' || state.freedom === 'strict') automaticModelStrategy = 'seedance25';
+  if (state.realism === 'animation' || state.freedom === 'flexible') automaticModelStrategy = 'seedance20';
+  const modelStrategy = state.modelStrategy === 'auto' ? automaticModelStrategy : state.modelStrategy;
   const rates = {
     seedance20: { '720p': 75, '1080p': 150, '4K': 330 },
     seedance25: { '720p': 90, '1080p': 180, '4K': 330 },
@@ -102,7 +105,7 @@ function profileProject() {
   };
   const estimatedCredits = modelCredits.seedance20 + modelCredits.seedance25;
 
-  return { days, rawDays, urgency, urgencyKey, totalDuration, automaticComplexity, complexity, attempts, requestedResolution, modelStrategy, sceneDetails, modelCredits, estimatedCredits };
+  return { days, rawDays, urgency, urgencyKey, totalDuration, automaticComplexity, complexity, attempts, requestedResolution, automaticModelStrategy, modelStrategy, sceneDetails, modelCredits, estimatedCredits };
 }
 
 function calculate() {
@@ -280,7 +283,7 @@ function render(renderTeamCards = true) {
   setText('breakCredits', `${integer.format(profile.estimatedCredits)} créditos · ${profile.totalDuration}s · ${state.scenes.length} cenas`);
   const strategyNames = { seedance20: 'Seedance 2.0', seedance25: 'Seedance 2.5', mixed: 'Seedance 2.0 + 2.5' };
   const modelBreakdown = document.getElementById('modelBreakdown');
-  if (modelBreakdown) modelBreakdown.innerHTML = `<header><span>ESTRATÉGIA AUTOMÁTICA</span><b>${strategyNames[profile.modelStrategy]}</b><small>${state.realism === 'photoreal' ? 'Fotorrealismo prioriza o Seedance 2.5.' : state.freedom === 'strict' ? 'Direção rígida prioriza o Seedance 2.5.' : state.realism === 'animation' || state.freedom === 'flexible' ? 'Animação ou maior liberdade prioriza o Seedance 2.0.' : 'Briefing equilibrado distribui as cenas entre os dois modelos.'}</small></header>${profile.sceneDetails.map(scene => `<div><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<footer><span>2.0: ${integer.format(profile.modelCredits.seedance20)} cr</span><span>2.5: ${integer.format(profile.modelCredits.seedance25)} cr</span><b>${integer.format(profile.estimatedCredits)} cr · ${precise.format(calc.creditProjectBrl)}</b></footer>`;
+  if (modelBreakdown) modelBreakdown.innerHTML = `<header><span>${state.modelStrategy === 'auto' ? 'ESTRATÉGIA AUTOMÁTICA' : 'ESTRATÉGIA MANUAL'}</span><b>${strategyNames[profile.modelStrategy]}</b><small>${state.modelStrategy !== 'auto' ? `Escolha manual aplicada. A recomendação automática seria ${strategyNames[profile.automaticModelStrategy]}.` : state.realism === 'photoreal' ? 'Fotorrealismo prioriza o Seedance 2.5.' : state.freedom === 'strict' ? 'Direção rígida prioriza o Seedance 2.5.' : state.realism === 'animation' || state.freedom === 'flexible' ? 'Animação ou maior liberdade prioriza o Seedance 2.0.' : 'Briefing equilibrado distribui as cenas entre os dois modelos.'}</small></header>${profile.sceneDetails.map(scene => `<div><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<footer><span>2.0: ${integer.format(profile.modelCredits.seedance20)} cr</span><span>2.5: ${integer.format(profile.modelCredits.seedance25)} cr</span><b>${integer.format(profile.estimatedCredits)} cr · ${precise.format(calc.creditProjectBrl)}</b></footer>`;
   const health = document.getElementById('healthStatus');
   const valid = calc.finalPrice > 0 && calc.result >= 0;
   health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS';
