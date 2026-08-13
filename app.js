@@ -23,6 +23,7 @@ const state = {
   scenes: [{ id: 1, duration: 20 }, { id: 2, duration: 20 }, { id: 3, duration: 20 }],
   realism: 'hybrid',
   quality: 'high',
+  freedom: 'balanced',
   complexityOverride: 'auto',
   higgsExtra: 150,
   fx: 5.2,
@@ -55,6 +56,7 @@ state.scenes = state.scenes.map((scene, index) => ({ id: scene.id || index + 1, 
 if (!state.deliveryDate || !/^\d{4}-\d{2}-\d{2}$/.test(state.deliveryDate)) state.deliveryDate = dateAfter(21);
 if (!['animation', 'hybrid', 'photoreal'].includes(state.realism)) state.realism = 'hybrid';
 if (!['standard', 'high', 'cinema'].includes(state.quality)) state.quality = 'high';
+if (!['flexible', 'balanced', 'strict'].includes(state.freedom)) state.freedom = 'balanced';
 if (!['auto', 'low', 'medium', 'high'].includes(state.complexityOverride)) state.complexityOverride = 'auto';
 
 function profileProject() {
@@ -75,25 +77,48 @@ function profileProject() {
   if ((state.quality === 'cinema' || state.scenes.length >= 7 || totalDuration > 150) && automaticComplexity === 'medium') automaticComplexity = 'high';
   const complexity = state.complexityOverride === 'auto' ? automaticComplexity : state.complexityOverride;
 
-  const realismCredits = { animation: 20, hybrid: 25, photoreal: 35 }[state.realism];
-  const qualityMultiplier = { standard: 1, high: 1.5, cinema: 2.5 }[state.quality];
-  const attempts = { low: 2, medium: 3, high: 4 }[complexity];
-  const blocks = state.scenes.reduce((sum, scene) => sum + Math.ceil(clamp(scene.duration, 15, 30) / 5), 0);
-  const estimatedCredits = Math.ceil(blocks * realismCredits * qualityMultiplier * attempts);
+  const baseAttempts = { low: 2, medium: 3, high: 4 }[complexity];
+  const attempts = Math.max(1, baseAttempts + (state.freedom === 'strict' ? 1 : state.freedom === 'flexible' ? -1 : 0));
+  const requestedResolution = { standard: '720p', high: '1080p', cinema: '4K' }[state.quality];
+  let modelStrategy = 'mixed';
+  if (state.realism === 'photoreal' || state.freedom === 'strict') modelStrategy = 'seedance25';
+  if (state.realism === 'animation' || state.freedom === 'flexible') modelStrategy = 'seedance20';
+  const rates = {
+    seedance20: { '720p': 75, '1080p': 150, '4K': 330 },
+    seedance25: { '720p': 90, '1080p': 180, '4K': 330 },
+  };
+  const sceneDetails = state.scenes.map((scene, index) => {
+    const duration = clamp(scene.duration, 15, 30);
+    const resolution = duration === 30 ? '4K' : requestedResolution;
+    const model = modelStrategy === 'mixed' ? (index % 2 === 0 ? 'seedance20' : 'seedance25') : modelStrategy;
+    const generations = Math.ceil(duration / 15);
+    const creditsPerGeneration = rates[model][resolution];
+    const credits = generations * creditsPerGeneration * attempts;
+    return { id: scene.id, number: index + 1, duration, resolution, model, generations, creditsPerGeneration, attempts, credits };
+  });
+  const modelCredits = {
+    seedance20: sceneDetails.filter(scene => scene.model === 'seedance20').reduce((sum, scene) => sum + scene.credits, 0),
+    seedance25: sceneDetails.filter(scene => scene.model === 'seedance25').reduce((sum, scene) => sum + scene.credits, 0),
+  };
+  const estimatedCredits = modelCredits.seedance20 + modelCredits.seedance25;
 
-  return { days, rawDays, urgency, urgencyKey, totalDuration, automaticComplexity, complexity, realismCredits, qualityMultiplier, attempts, blocks, estimatedCredits };
+  return { days, rawDays, urgency, urgencyKey, totalDuration, automaticComplexity, complexity, attempts, requestedResolution, modelStrategy, sceneDetails, modelCredits, estimatedCredits };
 }
 
 function calculate() {
   const profile = profileProject();
   const labor = state.team.reduce((sum, member) => sum + number(member.hours) * number(member.rate), 0);
-  const monthlyHiggsCredits = 3000 + number(state.higgsExtra) * 20;
-  const monthlyHiggsUsd = 129 + number(state.higgsExtra);
-  const creditUsd = monthlyHiggsUsd / Math.max(1, monthlyHiggsCredits);
+  const projectsMonth = Math.max(1, number(state.projectsMonth));
+  const monthlyHiggsCredits = 3000 + number(state.higgsExtra) * 21;
+  const creditUsd = 1 / 21;
   const higgsProjectUsd = profile.estimatedCredits * creditUsd;
-  const chatProjectUsd = 20 / Math.max(1, number(state.projectsMonth));
-  const technology = (higgsProjectUsd + chatProjectUsd) * number(state.fx) * 1.05;
-  const baseCost = labor + technology + number(state.thirdParty) + number(state.otherCosts);
+  const higgsUltraAllocated = 250 / projectsMonth;
+  const chatProjectBrl = 20 * number(state.fx) * 1.05 / projectsMonth;
+  const claudeProjectBrl = 20 * number(state.fx) * 1.05 / projectsMonth;
+  const creditProjectBrl = higgsProjectUsd * number(state.fx) * 1.05;
+  const technology = higgsUltraAllocated + creditProjectBrl + chatProjectBrl + claudeProjectBrl;
+  const overtimeFood = profile.urgency > 0 ? 250 : 0;
+  const baseCost = labor + technology + overtimeFood + number(state.thirdParty) + number(state.otherCosts);
   const contingencyValue = baseCost * number(state.contingency) / 100;
   const protectedCost = baseCost + contingencyValue;
   const leadMember = state.team.find(member => member.id === number(state.leadMemberId));
@@ -111,7 +136,7 @@ function calculate() {
     const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
     return { ...member, work, commercialCommission, total: work + commercialCommission };
   });
-  return { profile, labor, monthlyHiggsCredits, monthlyHiggsUsd, creditUsd, higgsProjectUsd, technology, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
+  return { profile, labor, monthlyHiggsCredits, creditUsd, higgsProjectUsd, higgsUltraAllocated, chatProjectBrl, claudeProjectBrl, creditProjectBrl, technology, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
 }
 
 function renderLeadSelector() {
@@ -184,9 +209,10 @@ function renderProject() {
   setText('complexityReason', state.complexityOverride === 'auto' ? `Automática: ${realismNames[state.realism]}, qualidade ${qualityNames[state.quality]}, ${state.scenes.length} cenas e ${profile.totalDuration}s.` : 'Classificação definida manualmente.');
   setText('estimatedCredits', `${integer.format(profile.estimatedCredits)} créditos`);
   setText('estimatedCreditCost', precise.format(calc.higgsProjectUsd * number(state.fx) * 1.05));
-  setText('creditFormula', `${profile.blocks} blocos de 5s × ${profile.realismCredits} cr × ${profile.qualityMultiplier.toLocaleString('pt-BR')} qualidade × ${profile.attempts} tentativas`);
+  setText('creditFormula', `${profile.sceneDetails.reduce((sum, scene) => sum + scene.generations, 0)} gerações de até 15s × ${profile.attempts} tentativa(s), detalhadas na etapa 02`);
   document.querySelectorAll('[data-realism]').forEach(button => button.classList.toggle('is-active', button.dataset.realism === state.realism));
   document.querySelectorAll('[data-quality]').forEach(button => button.classList.toggle('is-active', button.dataset.quality === state.quality));
+  document.querySelectorAll('[data-freedom]').forEach(button => button.classList.toggle('is-active', button.dataset.freedom === state.freedom));
   renderScenes();
 }
 
@@ -224,7 +250,13 @@ function render(renderTeamCards = true) {
   setText('summaryMargin', pct(calc.realMargin));
   setText('techProject', precise.format(calc.technology));
   setText('chatCost', precise.format(20 * number(state.fx) * 1.05));
-  setText('higgsUsageSummary', `Ultra: 3.000 cr + ${integer.format(number(state.higgsExtra) * 20)} extras`);
+  setText('claudeCost', precise.format(20 * number(state.fx) * 1.05));
+  setText('higgsUsageSummary', `Plano: R$ 250/mês · 3.000 cr + ${integer.format(number(state.higgsExtra) * 21)} extras`);
+  setText('runwayStatus', profile.urgency > 0 ? 'Não utilizado: projetos urgentes usam somente Higgsfield' : 'Plano gratuito · disponível para prazo normal');
+  document.getElementById('runwayRow')?.classList.toggle('is-disabled', profile.urgency > 0);
+  setText('foodCost', brl.format(calc.overtimeFood));
+  setText('foodStatus', profile.urgency > 0 ? 'R$ 250 aplicados por horas extras/plantão' : 'Não aplicado: projeto com prazo normal');
+  document.getElementById('foodRow')?.classList.toggle('is-disabled', profile.urgency === 0);
   setText('creditCoverageStatus', covered ? `${integer.format(profile.estimatedCredits)} créditos previstos; dentro da cota média do projeto.` : `${integer.format(profile.estimatedCredits)} créditos previstos; acima da cota média de ${integer.format(availablePerProject)}.`);
   document.getElementById('creditCoverageStatus')?.classList.toggle('warning', !covered);
   setText('finalPrice', brl.format(calc.finalPrice));
@@ -241,10 +273,14 @@ function render(renderTeamCards = true) {
   setText('laborCost', brl.format(calc.labor));
   setText('breakTech', precise.format(calc.technology));
   setText('breakOthers', brl.format(number(state.thirdParty) + number(state.otherCosts)));
+  setText('breakFood', brl.format(calc.overtimeFood));
   setText('breakContingency', brl.format(calc.contingencyValue));
   setText('productionPrice', brl.format(calc.productionPrice));
   setText('commercialExtras', brl.format(calc.finalPrice - calc.productionPrice));
   setText('breakCredits', `${integer.format(profile.estimatedCredits)} créditos · ${profile.totalDuration}s · ${state.scenes.length} cenas`);
+  const strategyNames = { seedance20: 'Seedance 2.0', seedance25: 'Seedance 2.5', mixed: 'Seedance 2.0 + 2.5' };
+  const modelBreakdown = document.getElementById('modelBreakdown');
+  if (modelBreakdown) modelBreakdown.innerHTML = `<header><span>ESTRATÉGIA AUTOMÁTICA</span><b>${strategyNames[profile.modelStrategy]}</b><small>${state.realism === 'photoreal' ? 'Fotorrealismo prioriza o Seedance 2.5.' : state.freedom === 'strict' ? 'Direção rígida prioriza o Seedance 2.5.' : state.realism === 'animation' || state.freedom === 'flexible' ? 'Animação ou maior liberdade prioriza o Seedance 2.0.' : 'Briefing equilibrado distribui as cenas entre os dois modelos.'}</small></header>${profile.sceneDetails.map(scene => `<div><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<footer><span>2.0: ${integer.format(profile.modelCredits.seedance20)} cr</span><span>2.5: ${integer.format(profile.modelCredits.seedance25)} cr</span><b>${integer.format(profile.estimatedCredits)} cr · ${precise.format(calc.creditProjectBrl)}</b></footer>`;
   const health = document.getElementById('healthStatus');
   const valid = calc.finalPrice > 0 && calc.result >= 0;
   health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS';
@@ -289,6 +325,10 @@ document.querySelectorAll('[data-realism]').forEach(button => button.addEventLis
 }));
 document.querySelectorAll('[data-quality]').forEach(button => button.addEventListener('click', () => {
   state.quality = button.dataset.quality;
+  persistAndRender();
+}));
+document.querySelectorAll('[data-freedom]').forEach(button => button.addEventListener('click', () => {
+  state.freedom = button.dataset.freedom;
   persistAndRender();
 }));
 document.querySelector('.breakdown-toggle').addEventListener('click', event => {

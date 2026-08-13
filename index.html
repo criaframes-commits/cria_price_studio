@@ -111,9 +111,11 @@
 
           <div class="section-label"><span>TECNOLOGIA</span><p>Assinaturas mensais divididas pela quantidade de projetos do mês.</p></div>
           <div class="tech-list">
-            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small id="higgsUsageSummary">3.000 créditos no plano</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="50">US$ 50 · 1.000 cr</option><option value="150" selected>US$ 150 · 3.000 cr</option><option value="250">US$ 250 · 5.000 cr</option></select></label></div>
-            <div class="tech-item"><span class="tech-logo outline">R</span><div><b>Runway</b><small>Plano gratuito neste momento</small></div><strong>R$ 0</strong></div>
+            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small id="higgsUsageSummary">Plano: R$ 250/mês</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="50">US$ 50 · 1.050 cr</option><option value="150" selected>US$ 150 · 3.150 cr</option><option value="250">US$ 250 · 5.250 cr</option></select></label></div>
+            <div class="tech-item" id="runwayRow"><span class="tech-logo outline">R</span><div><b>Runway</b><small id="runwayStatus">Plano gratuito neste momento</small></div><strong>R$ 0</strong></div>
             <div class="tech-item"><span class="tech-logo dark">AI</span><div><b>ChatGPT Plus</b><small>US$ 20/mês</small></div><strong id="chatCost">—</strong></div>
+            <div class="tech-item"><span class="tech-logo claude">C</span><div><b>Claude Pro</b><small>US$ 20/mês · cobrança mensal</small></div><strong id="claudeCost">—</strong></div>
+            <div class="tech-item" id="foodRow"><span class="tech-logo food">P</span><div><b>Alimentação de plantão</b><small id="foodStatus">R$ 250/mês · somente em projetos urgentes</small></div><strong id="foodCost">—</strong></div>
           </div>
 
           <div class="field-grid three compact-fields">
@@ -121,6 +123,30 @@
             <label class="field"><span>Projetos no mês</span><input data-key="projectsMonth" type="number" min="1" step="1" value="3" /><small>Divide o custo mensal das ferramentas.</small></label>
             <div class="field read-only"><span>Tecnologia neste projeto</span><strong id="techProject">—</strong><small id="creditCoverageStatus">Já inclui 5% de proteção cambial.</small></div>
           </div>
+
+          <div class="section-label separated"><span>MODELOS E CRÉDITOS</span><p>Detalhamento por cena usando a tabela interna configurada.</p></div>
+          <div class="choice-group model-choice">
+            <span class="choice-title">Liberdade criativa permitida pelo cliente</span>
+            <div class="visual-choices" id="freedomChoices">
+              <button type="button" data-freedom="flexible"><b>Mais liberdade</b><small>Menos tentativas para aprovação</small></button>
+              <button type="button" data-freedom="balanced"><b>Equilibrada</b><small>Segue o briefing com alguma exploração</small></button>
+              <button type="button" data-freedom="strict"><b>Direção rígida</b><small>Mais tentativas para chegar ao resultado exato</small></button>
+            </div>
+          </div>
+          <div class="model-policy">
+            <article class="model-card active"><span>MAIS LIBERDADE</span><h3>Seedance 2.0</h3><p>Usado para animação, exploração e maior flexibilidade. Cenas acima de 15s são divididas em duas gerações.</p></article>
+            <article class="model-card active"><span>MAIS REALISMO</span><h3>Seedance 2.5</h3><p>Usado quando o pedido exige realismo, consistência e direção mais rígida. Valores de 720p e 1080p são estimados.</p></article>
+          </div>
+          <div class="rate-reference">
+            <div><span>720p · 15s</span><b>75 créditos</b></div>
+            <div><span>1080p · 15s</span><b>150 créditos</b></div>
+            <div><span>4K · 15s · 2.0 ou 2.5</span><b>330 créditos</b></div>
+            <div class="not-applied"><span>720p · 30s</span><b>197 cr · não aplicado</b><small>Conflita com a regra interna: a partir de 30s, usar 4K.</small></div>
+            <div><span>Seedance 2.5 · 720p · 15s</span><b>90 cr · estimado</b></div>
+            <div><span>Seedance 2.5 · 1080p · 15s</span><b>180 cr · estimado</b></div>
+          </div>
+          <div class="credit-unit"><span>PREÇO DE REFERÊNCIA</span><strong>21 créditos = US$ 1</strong><small>Os valores por geração acima são uma tabela interna; o Higgsfield não publica essa grade completa em página oficial.</small></div>
+          <div class="model-breakdown" id="modelBreakdown"></div>
 
           <div class="section-label separated"><span>OUTROS CUSTOS</span><p>Valores pagos especificamente para este projeto.</p></div>
           <div class="field-grid two">
@@ -210,6 +236,7 @@
               <div><span>Tecnologia alocada</span><b id="breakTech">—</b></div>
               <div><span>Uso estimado do Higgsfield</span><b id="breakCredits">—</b></div>
               <div><span>Terceiros e outras despesas</span><b id="breakOthers">—</b></div>
+              <div><span>Alimentação de plantão</span><b id="breakFood">—</b></div>
               <div><span>Contingência</span><b id="breakContingency">—</b></div>
               <div><span>Preço antes dos adicionais comerciais</span><b id="productionPrice">—</b></div>
               <div><span>Direitos de uso e urgência</span><b id="commercialExtras">—</b></div>
