@@ -105,7 +105,9 @@ function render(renderTeamCards = true) {
   setText('summaryPrice', brl.format(c.finalPrice)); setText('summaryCost', brl.format(c.protectedCost));
   setText('summaryResult', brl.format(c.result)); setText('summaryMargin', pct(c.realMargin));
   setText('techProject', precise.format(c.technology)); setText('chatCost', precise.format(20 * number(state.fx) * 1.05));
-  setText('finalPrice', brl.format(c.finalPrice)); setText('quoteIdentity', `${state.project || 'Projeto sem nome'} · ${state.client || 'Cliente não informado'}`);
+  setText('finalPrice', brl.format(c.finalPrice));
+  setText('quoteProject', state.project || 'Projeto sem nome');
+  setText('quoteClient', state.client || 'Cliente não informado');
   setText('pathPrice', brl.format(c.finalPrice)); setText('pathDeductions', brl.format(c.deductions)); setText('pathCost', brl.format(c.protectedCost)); setText('pathResult', brl.format(c.result));
   setText('realMargin', `${pct(c.realMargin)} de margem`); setText('companyPercent', `${pct(state.companyRetention)} do resultado`);
   setText('poolPercent', `${pct(100-number(state.companyRetention))} do resultado`); setText('companyValue', brl.format(c.companyValue)); setText('teamPoolValue', brl.format(c.teamPool));
