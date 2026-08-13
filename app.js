@@ -13,6 +13,9 @@ function dateAfter(days) {
   return date.toISOString().slice(0, 10);
 }
 
+const CURRENT_RULES_VERSION = 2;
+const EXTRA_CREDIT_PACKS = { 0: 0, 30: 600, 50: 1000, 90: 1800, 150: 3000, 300: 6000 };
+
 const state = {
   step: 1,
   project: 'Filme institucional com IA',
@@ -26,7 +29,9 @@ const state = {
   freedom: 'balanced',
   modelStrategy: 'auto',
   complexityOverride: 'auto',
-  higgsExtra: 150,
+  higgsExtra: 0,
+  foodReserveMode: 'always',
+  rulesVersion: CURRENT_RULES_VERSION,
   fx: 5.2,
   projectsMonth: 3,
   thirdParty: 0,
@@ -46,10 +51,20 @@ const pct = value => `${Number(value || 0).toFixed(1).replace('.', ',')}%`;
 const number = value => Math.max(0, Number(value) || 0);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, number(value)));
 
+let savedRulesVersion = 0;
 try {
   const saved = JSON.parse(localStorage.getItem('cria-price-studio-v2'));
-  if (saved && typeof saved === 'object') Object.assign(state, saved, { step: 1 });
+  if (saved && typeof saved === 'object') {
+    savedRulesVersion = number(saved.rulesVersion);
+    Object.assign(state, saved, { step: 1 });
+  }
 } catch (_) {}
+
+if (savedRulesVersion < CURRENT_RULES_VERSION) {
+  state.higgsExtra = 0;
+  state.foodReserveMode = 'always';
+  state.rulesVersion = CURRENT_RULES_VERSION;
+}
 
 if (!Array.isArray(state.team) || !state.team.length) state.team = DEFAULT_TEAM;
 if (!Array.isArray(state.scenes) || !state.scenes.length) state.scenes = [{ id: 1, duration: 20 }, { id: 2, duration: 20 }, { id: 3, duration: 20 }];
@@ -60,6 +75,8 @@ if (!['standard', 'high', 'cinema'].includes(state.quality)) state.quality = 'hi
 if (!['flexible', 'balanced', 'strict'].includes(state.freedom)) state.freedom = 'balanced';
 if (!['auto', 'seedance20', 'mixed', 'seedance25'].includes(state.modelStrategy)) state.modelStrategy = 'auto';
 if (!['auto', 'low', 'medium', 'high'].includes(state.complexityOverride)) state.complexityOverride = 'auto';
+if (!Object.prototype.hasOwnProperty.call(EXTRA_CREDIT_PACKS, number(state.higgsExtra))) state.higgsExtra = 0;
+if (!['always', 'urgent', 'off'].includes(state.foodReserveMode)) state.foodReserveMode = 'always';
 
 function profileProject() {
   const today = new Date();
@@ -112,7 +129,8 @@ function calculate() {
   const profile = profileProject();
   const labor = state.team.reduce((sum, member) => sum + number(member.hours) * number(member.rate), 0);
   const projectsMonth = Math.max(1, number(state.projectsMonth));
-  const monthlyHiggsCredits = 3000 + number(state.higgsExtra) * 21;
+  const extraCredits = EXTRA_CREDIT_PACKS[number(state.higgsExtra)] || 0;
+  const monthlyHiggsCredits = 3000 + extraCredits;
   const creditUsd = 1 / 21;
   const higgsProjectUsd = profile.estimatedCredits * creditUsd;
   const higgsUltraAllocated = 250 / projectsMonth;
@@ -120,7 +138,8 @@ function calculate() {
   const claudeProjectBrl = 20 * number(state.fx) * 1.05 / projectsMonth;
   const creditProjectBrl = higgsProjectUsd * number(state.fx) * 1.05;
   const technology = higgsUltraAllocated + creditProjectBrl + chatProjectBrl + claudeProjectBrl;
-  const overtimeFood = profile.urgency > 0 ? 250 : 0;
+  const monthlyFoodReserve = state.foodReserveMode === 'always' || (state.foodReserveMode === 'urgent' && profile.urgency > 0) ? 250 : 0;
+  const overtimeFood = monthlyFoodReserve / projectsMonth;
   const baseCost = labor + technology + overtimeFood + number(state.thirdParty) + number(state.otherCosts);
   const contingencyValue = baseCost * number(state.contingency) / 100;
   const protectedCost = baseCost + contingencyValue;
@@ -139,7 +158,7 @@ function calculate() {
     const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
     return { ...member, work, commercialCommission, total: work + commercialCommission };
   });
-  return { profile, labor, monthlyHiggsCredits, creditUsd, higgsProjectUsd, higgsUltraAllocated, chatProjectBrl, claudeProjectBrl, creditProjectBrl, technology, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
+  return { profile, labor, extraCredits, monthlyHiggsCredits, creditUsd, higgsProjectUsd, higgsUltraAllocated, chatProjectBrl, claudeProjectBrl, creditProjectBrl, technology, monthlyFoodReserve, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
 }
 
 function renderLeadSelector() {
@@ -254,12 +273,11 @@ function render(renderTeamCards = true) {
   setText('techProject', precise.format(calc.technology));
   setText('chatCost', precise.format(20 * number(state.fx) * 1.05));
   setText('claudeCost', precise.format(20 * number(state.fx) * 1.05));
-  setText('higgsUsageSummary', `Plano: R$ 250/mês · 3.000 cr + ${integer.format(number(state.higgsExtra) * 21)} extras`);
+  setText('higgsUsageSummary', `Plano: R$ 250/mês · 3.000 cr${calc.extraCredits ? ` + ${integer.format(calc.extraCredits)} extras` : ' · sem extras'}`);
   setText('runwayStatus', profile.urgency > 0 ? 'Não utilizado: projetos urgentes usam somente Higgsfield' : 'Plano gratuito · disponível para prazo normal');
   document.getElementById('runwayRow')?.classList.toggle('is-disabled', profile.urgency > 0);
-  setText('foodCost', brl.format(calc.overtimeFood));
-  setText('foodStatus', profile.urgency > 0 ? 'R$ 250 aplicados por horas extras/plantão' : 'Não aplicado: projeto com prazo normal');
-  document.getElementById('foodRow')?.classList.toggle('is-disabled', profile.urgency === 0);
+  setText('foodStatus', calc.monthlyFoodReserve ? `R$ 250/mês · ${brl.format(calc.overtimeFood)} alocados neste projeto` : state.foodReserveMode === 'urgent' ? 'Não aplicado: o projeto não é urgente' : 'Reserva desativada');
+  document.getElementById('foodRow')?.classList.toggle('is-disabled', calc.monthlyFoodReserve === 0);
   setText('creditCoverageStatus', covered ? `${integer.format(profile.estimatedCredits)} créditos previstos; dentro da cota média do projeto.` : `${integer.format(profile.estimatedCredits)} créditos previstos; acima da cota média de ${integer.format(availablePerProject)}.`);
   document.getElementById('creditCoverageStatus')?.classList.toggle('warning', !covered);
   setText('finalPrice', brl.format(calc.finalPrice));

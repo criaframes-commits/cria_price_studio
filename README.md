@@ -26,7 +26,9 @@ Abra `index.html` no navegador. Os rascunhos ficam salvos apenas no próprio dis
 - A estratégia de modelos pode ser substituída manualmente por somente 2.0, somente 2.5 ou uma combinação dos dois.
 - O custo variável usa 21 créditos = US$ 1. O acesso Ultra custa R$ 250/mês e é rateado entre os projetos.
 - Claude Pro e ChatGPT Plus custam US$ 20/mês cada e são rateados entre os projetos.
-- Projetos urgentes usam somente Higgsfield e recebem R$ 250 de alimentação para horas extras/plantões.
+- Os pacotes extras disponíveis são US$ 30 (600 cr), US$ 50 (1.000 cr), US$ 90 (1.800 cr), US$ 150 (3.000 cr) e US$ 300 (6.000 cr); o padrão é não comprar créditos extras.
+- Projetos urgentes usam somente Higgsfield.
+- A reserva de alimentação de R$ 250/mês fica ativa por padrão e é rateada entre os projetos, podendo ser limitada a urgências ou desativada.
 - A complexidade automática prioriza o realismo: animação tende a baixa, híbrido a média e fotorrealismo a alta; qualidade, duração e número de cenas podem elevá-la.
 - Custo protegido = equipe + tecnologia + fornecedores + contingência.
 - Preço de produção = custo protegido ÷ percentual restante após margem, impostos e comissão.

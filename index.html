@@ -111,11 +111,11 @@
 
           <div class="section-label"><span>TECNOLOGIA</span><p>Assinaturas mensais divididas pela quantidade de projetos do mês.</p></div>
           <div class="tech-list">
-            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small id="higgsUsageSummary">Plano: R$ 250/mês</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="50">US$ 50 · 1.050 cr</option><option value="150" selected>US$ 150 · 3.150 cr</option><option value="250">US$ 250 · 5.250 cr</option></select></label></div>
+            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small id="higgsUsageSummary">Plano: R$ 250/mês</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="0" selected>Sem créditos extras</option><option value="30">US$ 30 · 600 cr</option><option value="50">US$ 50 · 1.000 cr</option><option value="90">US$ 90 · 1.800 cr</option><option value="150">US$ 150 · 3.000 cr</option><option value="300">US$ 300 · 6.000 cr</option></select></label></div>
             <div class="tech-item" id="runwayRow"><span class="tech-logo outline">R</span><div><b>Runway</b><small id="runwayStatus">Plano gratuito neste momento</small></div><strong>R$ 0</strong></div>
             <div class="tech-item"><span class="tech-logo dark">AI</span><div><b>ChatGPT Plus</b><small>US$ 20/mês</small></div><strong id="chatCost">—</strong></div>
             <div class="tech-item"><span class="tech-logo claude">C</span><div><b>Claude Pro</b><small>US$ 20/mês · cobrança mensal</small></div><strong id="claudeCost">—</strong></div>
-            <div class="tech-item" id="foodRow"><span class="tech-logo food">P</span><div><b>Alimentação de plantão</b><small id="foodStatus">R$ 250/mês · somente em projetos urgentes</small></div><strong id="foodCost">—</strong></div>
+            <div class="tech-item" id="foodRow"><span class="tech-logo food">A</span><div><b>Reserva de alimentação</b><small id="foodStatus">R$ 250/mês reservados</small></div><label><span>Quando guardar</span><select data-key="foodReserveMode" data-value-type="text"><option value="always" selected>Todos os meses</option><option value="urgent">Somente se urgente</option><option value="off">Não reservar</option></select></label></div>
           </div>
 
           <div class="field-grid three compact-fields">
@@ -246,7 +246,7 @@
               <div><span>Tecnologia alocada</span><b id="breakTech">—</b></div>
               <div><span>Uso estimado do Higgsfield</span><b id="breakCredits">—</b></div>
               <div><span>Terceiros e outras despesas</span><b id="breakOthers">—</b></div>
-              <div><span>Alimentação de plantão</span><b id="breakFood">—</b></div>
+              <div><span>Reserva de alimentação alocada</span><b id="breakFood">—</b></div>
               <div><span>Contingência</span><b id="breakContingency">—</b></div>
               <div><span>Preço antes dos adicionais comerciais</span><b id="productionPrice">—</b></div>
               <div><span>Direitos de uso e urgência</span><b id="commercialExtras">—</b></div>
