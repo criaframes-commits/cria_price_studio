@@ -6,38 +6,102 @@ const DEFAULT_TEAM = [
   { id: 5, name: 'Luan', role: 'Pré-produção', hours: 20, rate: 145 },
 ];
 
+function dateAfter(days) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 const state = {
-  step: 1, project: 'Filme institucional com IA', client: 'Cliente exemplo',
-  deliverables: '1 filme principal de até 60 segundos, formato 16:9, com 2 rodadas de ajustes.',
-  rights: 1, urgency: 0, higgsExtra: 150, fx: 5.2, projectsMonth: 3,
-  thirdParty: 0, otherCosts: 0, contingency: 10, margin: 30, taxes: 6,
-  commission: 5, leadMemberId: 3, team: DEFAULT_TEAM,
+  step: 1,
+  project: 'Filme institucional com IA',
+  client: 'Cliente exemplo',
+  deliverables: 'Filme principal em 16:9, com 2 rodadas de ajustes.',
+  rights: 1,
+  deliveryDate: dateAfter(21),
+  scenes: [{ id: 1, duration: 20 }, { id: 2, duration: 20 }, { id: 3, duration: 20 }],
+  realism: 'hybrid',
+  quality: 'high',
+  complexityOverride: 'auto',
+  higgsExtra: 150,
+  fx: 5.2,
+  projectsMonth: 3,
+  thirdParty: 0,
+  otherCosts: 0,
+  contingency: 10,
+  margin: 30,
+  taxes: 6,
+  commission: 5,
+  leadMemberId: 3,
+  team: DEFAULT_TEAM,
 };
 
-const brl = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 });
-const precise = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const precise = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+const integer = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 const pct = value => `${Number(value || 0).toFixed(1).replace('.', ',')}%`;
 const number = value => Math.max(0, Number(value) || 0);
+const clamp = (value, min, max) => Math.min(max, Math.max(min, number(value)));
 
 try {
   const saved = JSON.parse(localStorage.getItem('cria-price-studio-v2'));
-  if (saved && typeof saved === 'object') Object.assign(state, saved, { step:1 });
-  if (!Array.isArray(state.team) || !state.team.length) state.team = DEFAULT_TEAM;
+  if (saved && typeof saved === 'object') Object.assign(state, saved, { step: 1 });
 } catch (_) {}
 
+if (!Array.isArray(state.team) || !state.team.length) state.team = DEFAULT_TEAM;
+if (!Array.isArray(state.scenes) || !state.scenes.length) state.scenes = [{ id: 1, duration: 20 }, { id: 2, duration: 20 }, { id: 3, duration: 20 }];
+state.scenes = state.scenes.map((scene, index) => ({ id: scene.id || index + 1, duration: clamp(scene.duration || 20, 15, 30) }));
+if (!state.deliveryDate || !/^\d{4}-\d{2}-\d{2}$/.test(state.deliveryDate)) state.deliveryDate = dateAfter(21);
+if (!['animation', 'hybrid', 'photoreal'].includes(state.realism)) state.realism = 'hybrid';
+if (!['standard', 'high', 'cinema'].includes(state.quality)) state.quality = 'high';
+if (!['auto', 'low', 'medium', 'high'].includes(state.complexityOverride)) state.complexityOverride = 'auto';
+
+function profileProject() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const delivery = new Date(`${state.deliveryDate}T00:00:00`);
+  const rawDays = Number.isNaN(delivery.getTime()) ? 21 : Math.ceil((delivery - today) / 86400000);
+  const days = Math.max(0, rawDays);
+  const urgency = days <= 7 ? 30 : days <= 14 ? 15 : 0;
+  const urgencyKey = days <= 7 ? 'very' : days <= 14 ? 'urgent' : 'normal';
+  const totalDuration = state.scenes.reduce((sum, scene) => sum + clamp(scene.duration, 15, 30), 0);
+
+  let automaticComplexity = 'medium';
+  if (state.realism === 'photoreal') automaticComplexity = 'high';
+  if (state.realism === 'animation') automaticComplexity = 'low';
+  if (state.realism === 'hybrid') automaticComplexity = 'medium';
+  if ((state.quality === 'cinema' || state.scenes.length >= 6 || totalDuration > 120) && automaticComplexity === 'low') automaticComplexity = 'medium';
+  if ((state.quality === 'cinema' || state.scenes.length >= 7 || totalDuration > 150) && automaticComplexity === 'medium') automaticComplexity = 'high';
+  const complexity = state.complexityOverride === 'auto' ? automaticComplexity : state.complexityOverride;
+
+  const realismCredits = { animation: 20, hybrid: 25, photoreal: 35 }[state.realism];
+  const qualityMultiplier = { standard: 1, high: 1.5, cinema: 2.5 }[state.quality];
+  const attempts = { low: 2, medium: 3, high: 4 }[complexity];
+  const blocks = state.scenes.reduce((sum, scene) => sum + Math.ceil(clamp(scene.duration, 15, 30) / 5), 0);
+  const estimatedCredits = Math.ceil(blocks * realismCredits * qualityMultiplier * attempts);
+
+  return { days, rawDays, urgency, urgencyKey, totalDuration, automaticComplexity, complexity, realismCredits, qualityMultiplier, attempts, blocks, estimatedCredits };
+}
+
 function calculate() {
+  const profile = profileProject();
   const labor = state.team.reduce((sum, member) => sum + number(member.hours) * number(member.rate), 0);
-  const monthlyTechBrl = (129 + number(state.higgsExtra) + 20) * number(state.fx) * 1.05;
-  const technology = monthlyTechBrl / Math.max(1, number(state.projectsMonth));
+  const monthlyHiggsCredits = 3000 + number(state.higgsExtra) * 20;
+  const monthlyHiggsUsd = 129 + number(state.higgsExtra);
+  const creditUsd = monthlyHiggsUsd / Math.max(1, monthlyHiggsCredits);
+  const higgsProjectUsd = profile.estimatedCredits * creditUsd;
+  const chatProjectUsd = 20 / Math.max(1, number(state.projectsMonth));
+  const technology = (higgsProjectUsd + chatProjectUsd) * number(state.fx) * 1.05;
   const baseCost = labor + technology + number(state.thirdParty) + number(state.otherCosts);
   const contingencyValue = baseCost * number(state.contingency) / 100;
   const protectedCost = baseCost + contingencyValue;
   const leadMember = state.team.find(member => member.id === number(state.leadMemberId));
   const effectiveCommission = leadMember ? number(state.commission) : 0;
-  const denominator = 1 - number(state.margin)/100 - number(state.taxes)/100 - effectiveCommission/100;
-  const productionPrice = denominator > .05 ? protectedCost / denominator : 0;
+  const denominator = 1 - number(state.margin) / 100 - number(state.taxes) / 100 - effectiveCommission / 100;
+  const productionPrice = denominator > 0.05 ? protectedCost / denominator : 0;
   const withRights = productionPrice * number(state.rights);
-  const finalPrice = withRights * (1 + number(state.urgency)/100);
+  const finalPrice = withRights * (1 + profile.urgency / 100);
   const commissionValue = finalPrice * effectiveCommission / 100;
   const deductions = finalPrice * number(state.taxes) / 100 + commissionValue;
   const result = finalPrice - deductions - protectedCost;
@@ -45,9 +109,9 @@ function calculate() {
   const team = state.team.map(member => {
     const work = number(member.hours) * number(member.rate);
     const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
-    return {...member, work, commercialCommission, total:work + commercialCommission};
+    return { ...member, work, commercialCommission, total: work + commercialCommission };
   });
-  return {labor, technology, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue:result, commissionValue, leadMember, team};
+  return { profile, labor, monthlyHiggsCredits, monthlyHiggsUsd, creditUsd, higgsProjectUsd, technology, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
 }
 
 function renderLeadSelector() {
@@ -59,18 +123,19 @@ function renderLeadSelector() {
   if (select.value === '0') state.leadMemberId = 0;
 }
 
+function fieldValue(field) {
+  if (field.dataset.valueType === 'text' || field.type === 'text' || field.type === 'date' || field.tagName === 'TEXTAREA') return field.value;
+  if (field.tagName === 'SELECT' && field.dataset.valueType === 'text') return field.value;
+  return number(field.value);
+}
+
 function bindStateFields() {
   document.querySelectorAll('[data-key]').forEach(field => {
     const key = field.dataset.key;
     if (state[key] !== undefined) field.value = state[key];
-    field.addEventListener('input', () => {
-      state[key] = field.type === 'text' || field.tagName === 'TEXTAREA' ? field.value : number(field.value);
-      persistAndRender();
-    });
-    field.addEventListener('change', () => {
-      state[key] = field.type === 'text' || field.tagName === 'TEXTAREA' ? field.value : number(field.value);
-      persistAndRender();
-    });
+    const update = () => { state[key] = fieldValue(field); persistAndRender(); };
+    field.addEventListener('input', update);
+    field.addEventListener('change', update);
   });
 }
 
@@ -78,8 +143,51 @@ function goTo(step) {
   state.step = Math.min(4, Math.max(1, Number(step)));
   document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('is-active', Number(panel.dataset.panel) === state.step));
   document.querySelectorAll('.step').forEach((item, index) => item.classList.toggle('is-active', index + 1 === state.step));
-  document.querySelector('.stepper').scrollIntoView({ behavior:'smooth', block:'start' });
+  document.querySelector('.stepper').scrollIntoView({ behavior: 'smooth', block: 'start' });
   render();
+}
+
+function updateScene(id, duration) {
+  const scene = state.scenes.find(item => item.id === id);
+  if (!scene) return;
+  scene.duration = clamp(duration, 15, 30);
+  persistAndRender();
+}
+
+function renderScenes() {
+  const container = document.getElementById('sceneList');
+  container.innerHTML = state.scenes.map((scene, index) => `
+    <article class="scene-row">
+      <span>${String(index + 1).padStart(2, '0')}</span>
+      <div><b>Cena ${index + 1}</b><small>mín. 15s · máx. 30s</small></div>
+      <input type="range" min="15" max="30" step="1" value="${scene.duration}" data-scene-range="${scene.id}" aria-label="Duração da cena ${index + 1}" />
+      <label><input type="number" min="15" max="30" value="${scene.duration}" data-scene-number="${scene.id}" aria-label="Segundos da cena ${index + 1}" /><i>s</i></label>
+    </article>`).join('');
+  container.querySelectorAll('[data-scene-range]').forEach(input => input.addEventListener('change', () => updateScene(Number(input.dataset.sceneRange), input.value)));
+  container.querySelectorAll('[data-scene-number]').forEach(input => input.addEventListener('change', () => updateScene(Number(input.dataset.sceneNumber), input.value)));
+}
+
+function renderProject() {
+  const calc = calculate();
+  const profile = calc.profile;
+  const complexityNames = { low: 'Baixa', medium: 'Média', high: 'Alta' };
+  const realismNames = { animation: 'animação', hybrid: 'híbrido', photoreal: 'fotorrealismo' };
+  const qualityNames = { standard: 'standard', high: 'alta', cinema: 'cinema' };
+
+  setText('todayLabel', `Hoje: ${new Date().toLocaleDateString('pt-BR')}`);
+  setText('deadlineDays', profile.rawDays < 0 ? 'Data vencida' : `${profile.days} ${profile.days === 1 ? 'dia' : 'dias'}`);
+  setText('urgencyLabel', profile.urgencyKey === 'very' ? 'Muito urgente · até 1 semana · +30%' : profile.urgencyKey === 'urgent' ? 'Urgente · até 2 semanas · +15%' : 'Prazo normal · mais de 2 semanas');
+  document.querySelector('.deadline-result')?.setAttribute('data-urgency', profile.urgencyKey);
+  setText('sceneCount', String(state.scenes.length));
+  setText('totalDuration', `${profile.totalDuration}s`);
+  setText('complexityLabel', complexityNames[profile.complexity]);
+  setText('complexityReason', state.complexityOverride === 'auto' ? `Automática: ${realismNames[state.realism]}, qualidade ${qualityNames[state.quality]}, ${state.scenes.length} cenas e ${profile.totalDuration}s.` : 'Classificação definida manualmente.');
+  setText('estimatedCredits', `${integer.format(profile.estimatedCredits)} créditos`);
+  setText('estimatedCreditCost', precise.format(calc.higgsProjectUsd * number(state.fx) * 1.05));
+  setText('creditFormula', `${profile.blocks} blocos de 5s × ${profile.realismCredits} cr × ${profile.qualityMultiplier.toLocaleString('pt-BR')} qualidade × ${profile.attempts} tentativas`);
+  document.querySelectorAll('[data-realism]').forEach(button => button.classList.toggle('is-active', button.dataset.realism === state.realism));
+  document.querySelectorAll('[data-quality]').forEach(button => button.classList.toggle('is-active', button.dataset.quality === state.quality));
+  renderScenes();
 }
 
 function renderTeam() {
@@ -92,11 +200,10 @@ function renderTeam() {
       <label class="mini-field"><span>Valor / hora</span><input type="number" min="0" data-member="${member.id}" data-field="rate" value="${number(member.rate)}" /></label>
       <button class="remove-person" data-remove="${member.id}" aria-label="Remover ${escapeHtml(member.name)}">×</button>
     </article>`).join('');
-
   container.querySelectorAll('[data-member]').forEach(input => input.addEventListener('input', () => {
     const member = state.team.find(item => item.id === Number(input.dataset.member));
     if (!member) return;
-    member[input.dataset.field] = ['name','role'].includes(input.dataset.field) ? input.value : number(input.value);
+    member[input.dataset.field] = ['name', 'role'].includes(input.dataset.field) ? input.value : number(input.value);
     persistAndRender(false);
   }));
   container.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', () => {
@@ -107,46 +214,94 @@ function renderTeam() {
 }
 
 function render(renderTeamCards = true) {
-  const c = calculate();
-  setText('summaryPrice', brl.format(c.finalPrice)); setText('summaryCost', brl.format(c.protectedCost));
-  setText('summaryResult', brl.format(c.result)); setText('summaryMargin', pct(c.realMargin));
-  setText('techProject', precise.format(c.technology)); setText('chatCost', precise.format(20 * number(state.fx) * 1.05));
-  setText('finalPrice', brl.format(c.finalPrice));
+  const calc = calculate();
+  const profile = calc.profile;
+  const availablePerProject = Math.floor(calc.monthlyHiggsCredits / Math.max(1, number(state.projectsMonth)));
+  const covered = profile.estimatedCredits <= availablePerProject;
+  setText('summaryPrice', brl.format(calc.finalPrice));
+  setText('summaryCost', brl.format(calc.protectedCost));
+  setText('summaryResult', brl.format(calc.result));
+  setText('summaryMargin', pct(calc.realMargin));
+  setText('techProject', precise.format(calc.technology));
+  setText('chatCost', precise.format(20 * number(state.fx) * 1.05));
+  setText('higgsUsageSummary', `Ultra: 3.000 cr + ${integer.format(number(state.higgsExtra) * 20)} extras`);
+  setText('creditCoverageStatus', covered ? `${integer.format(profile.estimatedCredits)} créditos previstos; dentro da cota média do projeto.` : `${integer.format(profile.estimatedCredits)} créditos previstos; acima da cota média de ${integer.format(availablePerProject)}.`);
+  document.getElementById('creditCoverageStatus')?.classList.toggle('warning', !covered);
+  setText('finalPrice', brl.format(calc.finalPrice));
   setText('quoteProject', state.project || 'Projeto sem nome');
   setText('quoteClient', state.client || 'Cliente não informado');
-  setText('pathPrice', brl.format(c.finalPrice)); setText('pathDeductions', brl.format(c.deductions)); setText('pathCost', brl.format(c.protectedCost)); setText('pathResult', brl.format(c.result));
-  setText('realMargin', `${pct(c.realMargin)} de margem`); setText('companyValue', brl.format(c.companyValue));
-  setText('leadCommissionValue', brl.format(c.commissionValue));
-  setText('leadCommissionRecipient', c.leadMember ? `Pago a ${c.leadMember.name}` : 'Nenhum responsável selecionado');
-  setText('laborCost', brl.format(c.labor)); setText('breakTech', precise.format(c.technology)); setText('breakOthers', brl.format(number(state.thirdParty)+number(state.otherCosts)));
-  setText('breakContingency', brl.format(c.contingencyValue)); setText('productionPrice', brl.format(c.productionPrice)); setText('commercialExtras', brl.format(c.finalPrice-c.productionPrice));
+  setText('pathPrice', brl.format(calc.finalPrice));
+  setText('pathDeductions', brl.format(calc.deductions));
+  setText('pathCost', brl.format(calc.protectedCost));
+  setText('pathResult', brl.format(calc.result));
+  setText('realMargin', `${pct(calc.realMargin)} de margem`);
+  setText('companyValue', brl.format(calc.companyValue));
+  setText('leadCommissionValue', brl.format(calc.commissionValue));
+  setText('leadCommissionRecipient', calc.leadMember ? `Pago a ${calc.leadMember.name}` : 'Nenhum responsável selecionado');
+  setText('laborCost', brl.format(calc.labor));
+  setText('breakTech', precise.format(calc.technology));
+  setText('breakOthers', brl.format(number(state.thirdParty) + number(state.otherCosts)));
+  setText('breakContingency', brl.format(calc.contingencyValue));
+  setText('productionPrice', brl.format(calc.productionPrice));
+  setText('commercialExtras', brl.format(calc.finalPrice - calc.productionPrice));
+  setText('breakCredits', `${integer.format(profile.estimatedCredits)} créditos · ${profile.totalDuration}s · ${state.scenes.length} cenas`);
   const health = document.getElementById('healthStatus');
-  const valid = c.finalPrice > 0 && c.result >= 0;
-  health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS'; health.classList.toggle('warning', !valid);
-  document.getElementById('distributionList').innerHTML = c.team.map(member => `<div class="distribution-row"><span>${escapeHtml(member.name)}<small>${brl.format(member.work)} pelo trabalho${member.commercialCommission ? ` + ${brl.format(member.commercialCommission)} de comissão` : ''}</small></span>${member.commercialCommission ? '<b>LEAD</b>' : '<b>—</b>'}<strong>${brl.format(member.total)}</strong></div>`).join('');
+  const valid = calc.finalPrice > 0 && calc.result >= 0;
+  health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS';
+  health.classList.toggle('warning', !valid);
+  document.getElementById('distributionList').innerHTML = calc.team.map(member => `<div class="distribution-row"><span>${escapeHtml(member.name)}<small>${brl.format(member.work)} pelo trabalho${member.commercialCommission ? ` + ${brl.format(member.commercialCommission)} de comissão` : ''}</small></span>${member.commercialCommission ? '<b>LEAD</b>' : '<b>—</b>'}<strong>${brl.format(member.total)}</strong></div>`).join('');
   renderLeadSelector();
+  renderProject();
   if (renderTeamCards) renderTeam();
 }
 
-function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
-function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char])); }
+function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
+function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char])); }
 function persistAndRender(renderTeamCards = true) {
-  localStorage.setItem('cria-price-studio-v2', JSON.stringify({...state,step:undefined}));
-  const status = document.getElementById('saveStatus'); status.textContent = 'Salvo agora';
-  clearTimeout(window.saveTimer); window.saveTimer = setTimeout(() => status.textContent = 'Alterações salvas neste dispositivo', 1200);
+  localStorage.setItem('cria-price-studio-v2', JSON.stringify({ ...state, step: undefined, urgency: undefined }));
+  const status = document.getElementById('saveStatus');
+  status.textContent = 'Salvo agora';
+  clearTimeout(window.saveTimer);
+  window.saveTimer = setTimeout(() => status.textContent = 'Alterações salvas neste dispositivo', 1200);
   render(renderTeamCards);
 }
 
 document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => goTo(button.dataset.go)));
 document.getElementById('headerBudget').addEventListener('click', () => goTo(4));
 document.getElementById('addMember').addEventListener('click', () => {
-  const id = Math.max(0,...state.team.map(member => member.id)) + 1;
-  state.team.push({id,name:'Nova pessoa',role:'Função no projeto',hours:10,rate:145}); persistAndRender();
+  const id = Math.max(0, ...state.team.map(member => member.id)) + 1;
+  state.team.push({ id, name: 'Nova pessoa', role: 'Função no projeto', hours: 10, rate: 145 });
+  persistAndRender();
 });
+document.getElementById('addScene').addEventListener('click', () => {
+  const id = Math.max(0, ...state.scenes.map(scene => scene.id)) + 1;
+  state.scenes.push({ id, duration: 20 });
+  persistAndRender();
+});
+document.getElementById('removeScene').addEventListener('click', () => {
+  if (state.scenes.length <= 1) return;
+  state.scenes.pop();
+  persistAndRender();
+});
+document.querySelectorAll('[data-realism]').forEach(button => button.addEventListener('click', () => {
+  state.realism = button.dataset.realism;
+  persistAndRender();
+}));
+document.querySelectorAll('[data-quality]').forEach(button => button.addEventListener('click', () => {
+  state.quality = button.dataset.quality;
+  persistAndRender();
+}));
 document.querySelector('.breakdown-toggle').addEventListener('click', event => {
-  const button = event.currentTarget, body = document.querySelector('.breakdown-body'), open = body.hidden;
-  body.hidden = !open; button.setAttribute('aria-expanded', String(open)); button.querySelector('span').textContent = open ? '−' : '+';
+  const button = event.currentTarget;
+  const body = document.querySelector('.breakdown-body');
+  const open = body.hidden;
+  body.hidden = !open;
+  button.setAttribute('aria-expanded', String(open));
+  button.querySelector('span').textContent = open ? '−' : '+';
 });
-['printBudget','printBudgetBottom'].forEach(id => document.getElementById(id).addEventListener('click', () => window.print()));
+['printBudget', 'printBudgetBottom'].forEach(id => document.getElementById(id).addEventListener('click', () => window.print()));
 
-renderLeadSelector(); bindStateFields(); render();
+renderLeadSelector();
+bindStateFields();
+document.getElementById('deliveryDate').min = new Date().toISOString().slice(0, 10);
+render();

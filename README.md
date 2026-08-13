@@ -18,6 +18,10 @@ Abra `index.html` no navegador. Os rascunhos ficam salvos apenas no próprio dis
 ## Lógica principal
 
 - Custo do trabalho = horas × valor/hora.
+- Cada cena aceita entre 15 e 30 segundos; a duração total é a soma das cenas.
+- Até 7 dias o prazo é muito urgente; de 8 a 14 dias é urgente; acima disso é normal.
+- Os créditos são estimados por blocos de 5 segundos × custo do realismo × qualidade × tentativas da complexidade.
+- A complexidade automática prioriza o realismo: animação tende a baixa, híbrido a média e fotorrealismo a alta; qualidade, duração e número de cenas podem elevá-la.
 - Custo protegido = equipe + tecnologia + fornecedores + contingência.
 - Preço de produção = custo protegido ÷ percentual restante após margem, impostos e comissão.
 - Direitos e urgência são adicionais comerciais.

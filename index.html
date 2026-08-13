@@ -49,14 +49,56 @@
             <label class="field"><span>Cliente</span><input data-key="client" type="text" value="Cliente exemplo" /><small>Nome da empresa ou pessoa que receberá a proposta.</small></label>
           </div>
 
-          <label class="field"><span>O que será entregue?</span><textarea data-key="deliverables" rows="4">1 filme principal de até 60 segundos, formato 16:9, com 2 rodadas de ajustes.</textarea><small>Descreva formatos, duração, quantidade de peças e revisões incluídas. Quanto mais específico, menos retrabalho.</small></label>
-
-          <div class="field-grid two">
-            <label class="field"><span>Direitos de uso</span><select data-key="rights"><option value="1">Digital orgânico no Brasil</option><option value="1.15">Mídia paga digital no Brasil · +15%</option><option value="1.35">Campanha nacional multiplataforma · +35%</option><option value="1.6">Uso amplo ou exclusividade · +60%</option></select><small>Quanto maior a exposição e o tempo de uso, maior o valor comercial do trabalho.</small></label>
-            <label class="field"><span>Prazo</span><select data-key="urgency"><option value="0">Prazo normal</option><option value="15">Urgente · +15%</option><option value="30">Muito urgente · +30%</option></select><small>Use adicional quando o prazo reduz testes, aprovações e margem de segurança.</small></label>
+          <div class="section-label separated"><span>01 · PRAZO</span><p>O prazo é contado automaticamente a partir de hoje.</p></div>
+          <div class="deadline-card">
+            <label class="field"><span>Data de entrega</span><input id="deliveryDate" data-key="deliveryDate" data-value-type="text" type="date" /><small id="todayLabel">—</small></label>
+            <div class="deadline-result"><span>TEMPO DISPONÍVEL</span><strong id="deadlineDays">—</strong><small id="urgencyLabel">—</small></div>
           </div>
 
-          <div class="plain-explainer"><b>Em linguagem simples</b><p>Esta etapa descreve o que o cliente está comprando. Direitos de uso e urgência aumentam o preço porque aumentam o valor ou o risco do projeto — não porque a equipe trabalhou mais horas.</p></div>
+          <div class="section-label separated"><span>02 · CENAS E DURAÇÃO</span><p>Monte o filme cena por cena. Cada cena deve ter entre 15 e 30 segundos.</p></div>
+          <div class="scene-builder">
+            <div class="scene-toolbar">
+              <div><small>QUANTIDADE DE CENAS</small><strong id="sceneCount">—</strong></div>
+              <div class="scene-actions"><button type="button" id="removeScene" aria-label="Remover uma cena">−</button><button type="button" id="addScene" aria-label="Adicionar uma cena">+</button></div>
+              <div class="total-duration"><small>DURAÇÃO TOTAL</small><strong id="totalDuration">—</strong></div>
+            </div>
+            <div id="sceneList" class="scene-list"></div>
+          </div>
+
+          <div class="section-label separated"><span>03 · ESTÉTICA</span><p>Realismo e qualidade definem os modelos e a quantidade provável de tentativas.</p></div>
+          <div class="choice-group">
+            <span class="choice-title">Nível de realismo</span>
+            <div class="visual-choices" id="realismChoices">
+              <button type="button" data-realism="animation"><b>Animação</b><small>Mais previsível e econômico</small></button>
+              <button type="button" data-realism="hybrid"><b>Híbrido</b><small>Estilizado com elementos reais</small></button>
+              <button type="button" data-realism="photoreal"><b>Fotorrealista</b><small>Mais caro e complexo</small></button>
+            </div>
+          </div>
+          <div class="choice-group">
+            <span class="choice-title">Qualidade de geração</span>
+            <div class="visual-choices" id="qualityChoices">
+              <button type="button" data-quality="standard"><b>Standard</b><small>Uso digital e testes finais</small></button>
+              <button type="button" data-quality="high"><b>Alta</b><small>Campanhas e telas maiores</small></button>
+              <button type="button" data-quality="cinema"><b>Cinema</b><small>Modelos premium e acabamento</small></button>
+            </div>
+          </div>
+
+          <div class="complexity-card">
+            <div><span>COMPLEXIDADE DO PROJETO</span><strong id="complexityLabel">—</strong><small id="complexityReason">—</small></div>
+            <label class="field"><span>Ajuste manual</span><select data-key="complexityOverride" data-value-type="text"><option value="auto">Automática</option><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select><small>Use o automático como padrão. Altere apenas quando houver uma condição que o simulador não conhece.</small></label>
+          </div>
+
+          <div class="credit-estimate">
+            <div><span>CRÉDITOS HIGGSFIELD ESTIMADOS</span><strong id="estimatedCredits">—</strong><small id="creditFormula">—</small></div>
+            <div><span>CUSTO ESTIMADO DOS CRÉDITOS</span><strong id="estimatedCreditCost">—</strong><small>Valor convertido com câmbio e proteção configurados na etapa 02.</small></div>
+          </div>
+
+          <div class="field-grid two separated-fields">
+            <label class="field"><span>Direitos de uso</span><select data-key="rights"><option value="1">Digital orgânico no Brasil</option><option value="1.15">Mídia paga digital no Brasil · +15%</option><option value="1.35">Campanha nacional multiplataforma · +35%</option><option value="1.6">Uso amplo ou exclusividade · +60%</option></select><small>Quanto maior a exposição e o tempo de uso, maior o valor comercial do trabalho.</small></label>
+            <label class="field"><span>Observações e entregáveis</span><textarea data-key="deliverables" rows="3">Filme principal em 16:9, com 2 rodadas de ajustes.</textarea><small>Use este campo apenas para detalhes que não foram cobertos acima.</small></label>
+          </div>
+
+          <div class="plain-explainer"><b>Como o cálculo funciona</b><p>O sistema divide cada cena em blocos de geração, aplica o custo do nível de realismo, da qualidade e das tentativas esperadas para a complexidade. O prazo acrescenta urgência quando a data de entrega está muito próxima.</p></div>
           <div class="panel-actions"><span></span><button class="button button-blue" data-go="2">Continuar para custos →</button></div>
         </section>
 
@@ -69,7 +111,7 @@
 
           <div class="section-label"><span>TECNOLOGIA</span><p>Assinaturas mensais divididas pela quantidade de projetos do mês.</p></div>
           <div class="tech-list">
-            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small>Plano base: US$ 129/mês</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="50">US$ 50</option><option value="150" selected>US$ 150</option><option value="250">US$ 250</option></select></label></div>
+            <div class="tech-item"><span class="tech-logo">H</span><div><b>Higgsfield Ultra</b><small id="higgsUsageSummary">3.000 créditos no plano</small></div><label><span>Créditos extras</span><select data-key="higgsExtra"><option value="50">US$ 50 · 1.000 cr</option><option value="150" selected>US$ 150 · 3.000 cr</option><option value="250">US$ 250 · 5.000 cr</option></select></label></div>
             <div class="tech-item"><span class="tech-logo outline">R</span><div><b>Runway</b><small>Plano gratuito neste momento</small></div><strong>R$ 0</strong></div>
             <div class="tech-item"><span class="tech-logo dark">AI</span><div><b>ChatGPT Plus</b><small>US$ 20/mês</small></div><strong id="chatCost">—</strong></div>
           </div>
@@ -77,7 +119,7 @@
           <div class="field-grid three compact-fields">
             <label class="field"><span>Cotação do dólar</span><div class="input-prefix"><i>R$</i><input data-key="fx" type="number" min="1" step="0.01" value="5.20" /></div><small>Use a cotação prevista para o pagamento.</small></label>
             <label class="field"><span>Projetos no mês</span><input data-key="projectsMonth" type="number" min="1" step="1" value="3" /><small>Divide o custo mensal das ferramentas.</small></label>
-            <div class="field read-only"><span>Tecnologia neste projeto</span><strong id="techProject">—</strong><small>Já inclui 5% de proteção cambial.</small></div>
+            <div class="field read-only"><span>Tecnologia neste projeto</span><strong id="techProject">—</strong><small id="creditCoverageStatus">Já inclui 5% de proteção cambial.</small></div>
           </div>
 
           <div class="section-label separated"><span>OUTROS CUSTOS</span><p>Valores pagos especificamente para este projeto.</p></div>
@@ -166,6 +208,7 @@
             <div class="breakdown-body" hidden>
               <div><span>Custo do trabalho da equipe</span><b id="laborCost">—</b></div>
               <div><span>Tecnologia alocada</span><b id="breakTech">—</b></div>
+              <div><span>Uso estimado do Higgsfield</span><b id="breakCredits">—</b></div>
               <div><span>Terceiros e outras despesas</span><b id="breakOthers">—</b></div>
               <div><span>Contingência</span><b id="breakContingency">—</b></div>
               <div><span>Preço antes dos adicionais comerciais</span><b id="productionPrice">—</b></div>
