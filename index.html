@@ -92,8 +92,6 @@
               <label class="field"><span>Contingência</span><div class="input-suffix"><input data-key="contingency" type="number" min="0" max="50" value="10" /><i>%</i></div><small>Reserva para imprevistos.</small></label>
               <label class="field"><span>Margem desejada</span><div class="input-suffix"><input data-key="margin" type="number" min="0" max="70" value="30" /><i>%</i></div><small>Lucro-alvo sobre o preço.</small></label>
               <label class="field"><span>Impostos</span><div class="input-suffix"><input data-key="taxes" type="number" min="0" max="40" value="6" /><i>%</i></div><small>Alíquota incidente na venda.</small></label>
-              <label class="field"><span>Comissão comercial</span><div class="input-suffix"><input data-key="commission" type="number" min="0" max="30" value="0" /><i>%</i></div><small>Se Gabriela captou e fechou o cliente, uma referência possível é 5%.</small></label>
-              <label class="field"><span>Retenção da empresa</span><div class="input-suffix"><input data-key="companyRetention" type="number" min="0" max="100" value="60" /><i>%</i></div><small>Parte do lucro que permanece no caixa da Cria.</small></label>
             </div>
           </details>
 
@@ -103,13 +101,22 @@
 
         <section class="panel" data-panel="3">
           <header class="panel-head team-heading">
-            <div><span>ETAPA 03</span><h2>QUEM PARTICIPA?</h2><p>Defina o custo do trabalho e o peso de participação no lucro. São duas coisas diferentes.</p></div>
+            <div><span>ETAPA 03</span><h2>QUEM PARTICIPA?</h2><p>Defina as horas e o valor do trabalho de cada pessoa. O resultado líquido do projeto vai para o caixa da Cria.</p></div>
             <button class="button button-light" id="addMember">+ Adicionar pessoa</button>
           </header>
 
-          <div class="team-legend"><span><i>A</i><b>Custo do trabalho</b> = horas × valor/hora</span><span><i>B</i><b>Participação</b> = parcela do bônus da equipe</span></div>
+          <div class="team-legend"><span><i>A</i><b>Custo do trabalho</b> = horas × valor/hora</span><span><i>B</i><b>Resultado líquido</b> = caixa da Cria Frames</span></div>
           <p class="cost-adjustment">Os valores/hora iniciais já estão readequados em 15% para a realidade atual da produtora.</p>
           <div id="teamCards" class="team-cards"></div>
+
+          <div class="lead-card">
+            <div class="section-label"><span>COMISSÃO COMERCIAL</span><p>Identifique quem trouxe o lead deste projeto.</p></div>
+            <div class="field-grid two">
+              <label class="field"><span>Responsável pelo lead</span><select id="leadMember" data-key="leadMemberId"></select><small>Escolha o integrante que originou a oportunidade. Selecione “Sem comissão” quando não houver responsável.</small></label>
+              <label class="field"><span>Percentual de comissão</span><div class="input-suffix"><input data-key="commission" type="number" min="0" max="30" value="5" /><i>%</i></div><small>Percentual calculado sobre o valor final do orçamento e pago ao responsável pelo lead.</small></label>
+            </div>
+            <div class="lead-summary"><span>Comissão estimada</span><strong id="leadCommissionValue">—</strong><small id="leadCommissionRecipient">Selecione um responsável</small></div>
+          </div>
 
           <div class="panel-actions"><button class="button button-light" data-go="2">← Voltar</button><button class="button button-blue" data-go="4">Calcular orçamento →</button></div>
         </section>
@@ -142,16 +149,15 @@
 
           <div class="result-grid">
             <article class="result-box">
-              <header><div><span>DIVISÃO DO RESULTADO</span><h3>Empresa × equipe</h3></div><b id="realMargin">—</b></header>
-              <div class="split-bar"><span id="companyBar"></span><i id="teamBar"></i></div>
-              <div class="split-legend"><div><i></i><span>Caixa da Cria Frames<small id="companyPercent">—</small></span><strong id="companyValue">—</strong></div><div><i></i><span>Bônus para a equipe<small id="poolPercent">—</small></span><strong id="teamPoolValue">—</strong></div></div>
-              <p>O custo do trabalho já foi incluído antes. Esta divisão acontece somente sobre o resultado que sobrou.</p>
+              <header><div><span>DESTINO DO RESULTADO</span><h3>Caixa da Cria Frames</h3></div><b id="realMargin">—</b></header>
+              <div class="company-result"><small>RESULTADO LÍQUIDO DO PROJETO</small><strong id="companyValue">—</strong><span>100% destinado à produtora</span></div>
+              <p>O pagamento do trabalho, os impostos e a comissão comercial já foram descontados antes deste valor.</p>
             </article>
 
             <article class="result-box">
-              <header><div><span>DIVISÃO DA EQUIPE</span><h3>Participação individual</h3></div></header>
+              <header><div><span>PAGAMENTOS DA EQUIPE</span><h3>Trabalho e comissão</h3></div></header>
               <div id="distributionList" class="distribution-list"></div>
-              <p>O total de cada pessoa é o pagamento pelo trabalho mais sua parte do bônus. Comissão comercial, quando usada, é calculada separadamente.</p>
+              <p>Cada pessoa recebe pelo trabalho realizado. Somente o responsável pelo lead recebe também a comissão comercial.</p>
             </article>
           </div>
 

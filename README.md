@@ -1,6 +1,6 @@
 # Cria Price Studio
 
-Ferramenta interna da Cria Frames para criar orçamentos, proteger a margem da produtora e dividir a participação da equipe.
+Ferramenta interna da Cria Frames para criar orçamentos, proteger a margem da produtora e registrar os pagamentos da equipe.
 
 ## Publicar no GitHub Pages
 
@@ -21,4 +21,6 @@ Abra `index.html` no navegador. Os rascunhos ficam salvos apenas no próprio dis
 - Custo protegido = equipe + tecnologia + fornecedores + contingência.
 - Preço de produção = custo protegido ÷ percentual restante após margem, impostos e comissão.
 - Direitos e urgência são adicionais comerciais.
-- A participação da equipe incide apenas sobre o resultado do projeto; ela não substitui o pagamento do trabalho.
+- Cada integrante recebe pelo trabalho realizado, calculado por horas × valor/hora.
+- A comissão comercial é paga somente ao integrante selecionado como responsável pelo lead.
+- Depois dos custos, impostos e comissão, todo o resultado líquido permanece no caixa da Cria Frames.

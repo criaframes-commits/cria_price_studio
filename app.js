@@ -1,9 +1,9 @@
 const DEFAULT_TEAM = [
-  { id: 1, name: 'Amanda', role: 'Direção visual e produção', hours: 20, rate: 204, weight: 27 },
-  { id: 2, name: 'João Vitor', role: 'Direção visual e produção', hours: 20, rate: 204, weight: 27 },
-  { id: 3, name: 'Gabriela', role: 'Comercial e financeiro', hours: 20, rate: 145, weight: 19 },
-  { id: 4, name: 'Julia', role: 'Pré-produção e TI', hours: 20, rate: 170, weight: 15 },
-  { id: 5, name: 'Luan', role: 'Pré-produção', hours: 20, rate: 145, weight: 12 },
+  { id: 1, name: 'Amanda', role: 'Direção visual e produção', hours: 20, rate: 204 },
+  { id: 2, name: 'João Vitor', role: 'Direção visual e produção', hours: 20, rate: 204 },
+  { id: 3, name: 'Gabriela', role: 'Comercial e financeiro', hours: 20, rate: 145 },
+  { id: 4, name: 'Julia', role: 'Pré-produção e TI', hours: 20, rate: 170 },
+  { id: 5, name: 'Luan', role: 'Pré-produção', hours: 20, rate: 145 },
 ];
 
 const state = {
@@ -11,7 +11,7 @@ const state = {
   deliverables: '1 filme principal de até 60 segundos, formato 16:9, com 2 rodadas de ajustes.',
   rights: 1, urgency: 0, higgsExtra: 150, fx: 5.2, projectsMonth: 3,
   thirdParty: 0, otherCosts: 0, contingency: 10, margin: 30, taxes: 6,
-  commission: 0, companyRetention: 60, team: DEFAULT_TEAM,
+  commission: 5, leadMemberId: 3, team: DEFAULT_TEAM,
 };
 
 const brl = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 });
@@ -32,23 +32,31 @@ function calculate() {
   const baseCost = labor + technology + number(state.thirdParty) + number(state.otherCosts);
   const contingencyValue = baseCost * number(state.contingency) / 100;
   const protectedCost = baseCost + contingencyValue;
-  const denominator = 1 - number(state.margin)/100 - number(state.taxes)/100 - number(state.commission)/100;
+  const leadMember = state.team.find(member => member.id === number(state.leadMemberId));
+  const effectiveCommission = leadMember ? number(state.commission) : 0;
+  const denominator = 1 - number(state.margin)/100 - number(state.taxes)/100 - effectiveCommission/100;
   const productionPrice = denominator > .05 ? protectedCost / denominator : 0;
   const withRights = productionPrice * number(state.rights);
   const finalPrice = withRights * (1 + number(state.urgency)/100);
-  const deductions = finalPrice * (number(state.taxes) + number(state.commission)) / 100;
+  const commissionValue = finalPrice * effectiveCommission / 100;
+  const deductions = finalPrice * number(state.taxes) / 100 + commissionValue;
   const result = finalPrice - deductions - protectedCost;
   const realMargin = finalPrice ? result / finalPrice * 100 : 0;
-  const teamPool = Math.max(0, result) * (1 - number(state.companyRetention)/100);
-  const companyValue = result - teamPool;
-  const totalWeight = state.team.reduce((sum, member) => sum + number(member.weight), 0) || 1;
   const team = state.team.map(member => {
-    const share = number(member.weight) / totalWeight;
     const work = number(member.hours) * number(member.rate);
-    const bonus = teamPool * share;
-    return {...member, share, work, bonus, total:work + bonus};
+    const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
+    return {...member, work, commercialCommission, total:work + commercialCommission};
   });
-  return {labor, technology, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, teamPool, companyValue, team};
+  return {labor, technology, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue:result, commissionValue, leadMember, team};
+}
+
+function renderLeadSelector() {
+  const select = document.getElementById('leadMember');
+  if (!select) return;
+  const current = number(state.leadMemberId);
+  select.innerHTML = `<option value="0">Sem comissão comercial</option>${state.team.map(member => `<option value="${member.id}">${escapeHtml(member.name)}</option>`).join('')}`;
+  select.value = state.team.some(member => member.id === current) ? String(current) : '0';
+  if (select.value === '0') state.leadMemberId = 0;
 }
 
 function bindStateFields() {
@@ -82,8 +90,6 @@ function renderTeam() {
       <div class="person"><input class="person-name" aria-label="Nome do integrante" data-member="${member.id}" data-field="name" value="${escapeHtml(member.name)}" /><input aria-label="Função de ${escapeHtml(member.name)}" data-member="${member.id}" data-field="role" value="${escapeHtml(member.role)}" /></div>
       <label class="mini-field"><span>Horas</span><input type="number" min="0" data-member="${member.id}" data-field="hours" value="${number(member.hours)}" /></label>
       <label class="mini-field"><span>Valor / hora</span><input type="number" min="0" data-member="${member.id}" data-field="rate" value="${number(member.rate)}" /></label>
-      <label class="mini-field"><span>Peso</span><input type="number" min="0" data-member="${member.id}" data-field="weight" value="${number(member.weight)}" /></label>
-      <div class="share-pill" title="Participação no bônus">${pct(member.share * 100)}</div>
       <button class="remove-person" data-remove="${member.id}" aria-label="Remover ${escapeHtml(member.name)}">×</button>
     </article>`).join('');
 
@@ -109,16 +115,16 @@ function render(renderTeamCards = true) {
   setText('quoteProject', state.project || 'Projeto sem nome');
   setText('quoteClient', state.client || 'Cliente não informado');
   setText('pathPrice', brl.format(c.finalPrice)); setText('pathDeductions', brl.format(c.deductions)); setText('pathCost', brl.format(c.protectedCost)); setText('pathResult', brl.format(c.result));
-  setText('realMargin', `${pct(c.realMargin)} de margem`); setText('companyPercent', `${pct(state.companyRetention)} do resultado`);
-  setText('poolPercent', `${pct(100-number(state.companyRetention))} do resultado`); setText('companyValue', brl.format(c.companyValue)); setText('teamPoolValue', brl.format(c.teamPool));
-  document.getElementById('companyBar').style.width = `${number(state.companyRetention)}%`;
-  document.getElementById('teamBar').style.width = `${100-number(state.companyRetention)}%`;
+  setText('realMargin', `${pct(c.realMargin)} de margem`); setText('companyValue', brl.format(c.companyValue));
+  setText('leadCommissionValue', brl.format(c.commissionValue));
+  setText('leadCommissionRecipient', c.leadMember ? `Pago a ${c.leadMember.name}` : 'Nenhum responsável selecionado');
   setText('laborCost', brl.format(c.labor)); setText('breakTech', precise.format(c.technology)); setText('breakOthers', brl.format(number(state.thirdParty)+number(state.otherCosts)));
   setText('breakContingency', brl.format(c.contingencyValue)); setText('productionPrice', brl.format(c.productionPrice)); setText('commercialExtras', brl.format(c.finalPrice-c.productionPrice));
   const health = document.getElementById('healthStatus');
   const valid = c.finalPrice > 0 && c.result >= 0;
   health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS'; health.classList.toggle('warning', !valid);
-  document.getElementById('distributionList').innerHTML = c.team.map(member => `<div class="distribution-row"><span>${escapeHtml(member.name)}<small>${brl.format(member.work)} trabalho + ${brl.format(member.bonus)} bônus</small></span><b>${pct(member.share*100)}</b><strong>${brl.format(member.total)}</strong></div>`).join('');
+  document.getElementById('distributionList').innerHTML = c.team.map(member => `<div class="distribution-row"><span>${escapeHtml(member.name)}<small>${brl.format(member.work)} pelo trabalho${member.commercialCommission ? ` + ${brl.format(member.commercialCommission)} de comissão` : ''}</small></span>${member.commercialCommission ? '<b>LEAD</b>' : '<b>—</b>'}<strong>${brl.format(member.total)}</strong></div>`).join('');
+  renderLeadSelector();
   if (renderTeamCards) renderTeam();
 }
 
@@ -135,7 +141,7 @@ document.querySelectorAll('[data-go]').forEach(button => button.addEventListener
 document.getElementById('headerBudget').addEventListener('click', () => goTo(4));
 document.getElementById('addMember').addEventListener('click', () => {
   const id = Math.max(0,...state.team.map(member => member.id)) + 1;
-  state.team.push({id,name:'Nova pessoa',role:'Função no projeto',hours:10,rate:145,weight:10}); persistAndRender();
+  state.team.push({id,name:'Nova pessoa',role:'Função no projeto',hours:10,rate:145}); persistAndRender();
 });
 document.querySelector('.breakdown-toggle').addEventListener('click', event => {
   const button = event.currentTarget, body = document.querySelector('.breakdown-body'), open = body.hidden;
@@ -143,4 +149,4 @@ document.querySelector('.breakdown-toggle').addEventListener('click', event => {
 });
 ['printBudget','printBudgetBottom'].forEach(id => document.getElementById(id).addEventListener('click', () => window.print()));
 
-bindStateFields(); render();
+renderLeadSelector(); bindStateFields(); render();
