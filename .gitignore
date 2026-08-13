@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+*.log
+.env*
+node_modules/
+.next/
+.vinext/
+.wrangler/
+dist/
+out/
+outputs/
+work/
