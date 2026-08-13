@@ -20,11 +20,16 @@ Abra `index.html` no navegador. Os rascunhos ficam salvos apenas no próprio dis
 - Custo do trabalho = horas × valor/hora.
 - Cada cena aceita entre 15 e 30 segundos; a duração total é a soma das cenas.
 - Até 7 dias o prazo é muito urgente; de 8 a 14 dias é urgente; acima disso é normal.
+- Datas e prazos usam o dia local do dispositivo, evitando mudança de data causada pelo fuso horário.
 - Cenas acima de 15 segundos são divididas em duas gerações; cenas de 30 segundos usam somente 4K.
 - O crédito é calculado pela tabela interna de cada modelo e resolução, multiplicada pelo número de tentativas da complexidade.
 - Seedance 2.0 é priorizado para animação e liberdade; Seedance 2.5 para realismo e direção rígida; pedidos equilibrados combinam os dois.
 - A estratégia de modelos pode ser substituída manualmente por somente 2.0, somente 2.5 ou uma combinação dos dois.
-- O custo variável usa 21 créditos = US$ 1. O acesso Ultra custa R$ 250/mês e é rateado entre os projetos.
+- A cota planejada de cada projeto é `(3.000 créditos + pacote extra) ÷ projetos no mês`.
+- A quantidade de projetos é tratada como número inteiro, com mínimo de 1.
+- O acesso Ultra custa R$ 250/mês. O plano e o pacote extra escolhido são rateados entre os projetos.
+- Os créditos já incluídos nessa cota não são cobrados novamente. Somente o uso acima da cota recebe uma provisão adicional pela referência de 21 créditos = US$ 1.
+- Assinaturas e créditos em dólar são convertidos pela cotação informada com 5% de proteção cambial.
 - Claude Pro e ChatGPT Plus custam US$ 20/mês cada e são rateados entre os projetos.
 - Os pacotes extras disponíveis são US$ 30 (600 cr), US$ 50 (1.000 cr), US$ 90 (1.800 cr), US$ 150 (3.000 cr) e US$ 300 (6.000 cr); o padrão é não comprar créditos extras.
 - Projetos urgentes usam somente Higgsfield.

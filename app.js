@@ -6,15 +6,24 @@ const DEFAULT_TEAM = [
   { id: 5, name: 'Luan', role: 'Pré-produção', hours: 20, rate: 145 },
 ];
 
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function dateAfter(days) {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return localDateValue(date);
 }
 
 const CURRENT_RULES_VERSION = 2;
 const EXTRA_CREDIT_PACKS = { 0: 0, 30: 600, 50: 1000, 90: 1800, 150: 3000, 300: 6000 };
+const BASE_HIGGS_CREDITS = 3000;
+const EXCHANGE_PROTECTION = 1.05;
 
 const state = {
   step: 1,
@@ -128,16 +137,24 @@ function profileProject() {
 function calculate() {
   const profile = profileProject();
   const labor = state.team.reduce((sum, member) => sum + number(member.hours) * number(member.rate), 0);
-  const projectsMonth = Math.max(1, number(state.projectsMonth));
+  const projectsMonth = Math.max(1, Math.round(number(state.projectsMonth)));
+  const exchangeWithProtection = number(state.fx) * EXCHANGE_PROTECTION;
+  const extraPackUsd = number(state.higgsExtra);
   const extraCredits = EXTRA_CREDIT_PACKS[number(state.higgsExtra)] || 0;
-  const monthlyHiggsCredits = 3000 + extraCredits;
+  const monthlyHiggsCredits = BASE_HIGGS_CREDITS + extraCredits;
+  const plannedCreditsPerProject = monthlyHiggsCredits / projectsMonth;
+  const excessCredits = Math.max(0, profile.estimatedCredits - plannedCreditsPerProject);
   const creditUsd = 1 / 21;
   const higgsProjectUsd = profile.estimatedCredits * creditUsd;
-  const higgsUltraAllocated = 250 / projectsMonth;
-  const chatProjectBrl = 20 * number(state.fx) * 1.05 / projectsMonth;
-  const claudeProjectBrl = 20 * number(state.fx) * 1.05 / projectsMonth;
-  const creditProjectBrl = higgsProjectUsd * number(state.fx) * 1.05;
-  const technology = higgsUltraAllocated + creditProjectBrl + chatProjectBrl + claudeProjectBrl;
+  const creditProjectBrl = higgsProjectUsd * exchangeWithProtection;
+  const higgsExtraMonthlyBrl = extraPackUsd * exchangeWithProtection;
+  const higgsMonthlyBrl = 250 + higgsExtraMonthlyBrl;
+  const higgsAllocated = higgsMonthlyBrl / projectsMonth;
+  const chatProjectBrl = 20 * exchangeWithProtection / projectsMonth;
+  const claudeProjectBrl = 20 * exchangeWithProtection / projectsMonth;
+  const subscriptionsAllocated = higgsAllocated + chatProjectBrl + claudeProjectBrl;
+  const excessCreditProvisionBrl = excessCredits * creditUsd * exchangeWithProtection;
+  const technology = subscriptionsAllocated + excessCreditProvisionBrl;
   const monthlyFoodReserve = state.foodReserveMode === 'always' || (state.foodReserveMode === 'urgent' && profile.urgency > 0) ? 250 : 0;
   const overtimeFood = monthlyFoodReserve / projectsMonth;
   const baseCost = labor + technology + overtimeFood + number(state.thirdParty) + number(state.otherCosts);
@@ -158,7 +175,19 @@ function calculate() {
     const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
     return { ...member, work, commercialCommission, total: work + commercialCommission };
   });
-  return { profile, labor, extraCredits, monthlyHiggsCredits, creditUsd, higgsProjectUsd, higgsUltraAllocated, chatProjectBrl, claudeProjectBrl, creditProjectBrl, technology, monthlyFoodReserve, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
+  return { profile, labor, projectsMonth, extraPackUsd, extraCredits, monthlyHiggsCredits, plannedCreditsPerProject, excessCredits, creditUsd, higgsProjectUsd, creditProjectBrl, higgsExtraMonthlyBrl, higgsMonthlyBrl, higgsAllocated, chatProjectBrl, claudeProjectBrl, subscriptionsAllocated, excessCreditProvisionBrl, technology, monthlyFoodReserve, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
+}
+
+function extraCreditRecommendation(calc) {
+  if (!calc.excessCredits) return '';
+  const creditsNeededInMonth = Math.ceil(calc.profile.estimatedCredits * calc.projectsMonth - BASE_HIGGS_CREDITS);
+  const options = Object.entries(EXTRA_CREDIT_PACKS)
+    .map(([usd, credits]) => ({ usd: number(usd), credits }))
+    .filter(option => option.credits > 0)
+    .sort((a, b) => a.credits - b.credits);
+  const option = options.find(item => item.credits >= creditsNeededInMonth);
+  if (option) return `Para manter essa divisão, selecione ao menos US$ ${integer.format(option.usd)} · ${integer.format(option.credits)} cr extras.`;
+  return `Para manter a mesma cota para todos os projetos, seriam necessários mais ${integer.format(creditsNeededInMonth)} cr no mês; o maior pacote disponível não cobre sozinho.`;
 }
 
 function renderLeadSelector() {
@@ -264,8 +293,8 @@ function renderTeam() {
 function render(renderTeamCards = true) {
   const calc = calculate();
   const profile = calc.profile;
-  const availablePerProject = Math.floor(calc.monthlyHiggsCredits / Math.max(1, number(state.projectsMonth)));
-  const covered = profile.estimatedCredits <= availablePerProject;
+  const availablePerProject = Math.floor(calc.plannedCreditsPerProject);
+  const covered = calc.excessCredits === 0;
   setText('summaryPrice', brl.format(calc.finalPrice));
   setText('summaryCost', brl.format(calc.protectedCost));
   setText('summaryResult', brl.format(calc.result));
@@ -278,8 +307,11 @@ function render(renderTeamCards = true) {
   document.getElementById('runwayRow')?.classList.toggle('is-disabled', profile.urgency > 0);
   setText('foodStatus', calc.monthlyFoodReserve ? `R$ 250/mês · ${brl.format(calc.overtimeFood)} alocados neste projeto` : state.foodReserveMode === 'urgent' ? 'Não aplicado: o projeto não é urgente' : 'Reserva desativada');
   document.getElementById('foodRow')?.classList.toggle('is-disabled', calc.monthlyFoodReserve === 0);
-  setText('creditCoverageStatus', covered ? `${integer.format(profile.estimatedCredits)} créditos previstos; dentro da cota média do projeto.` : `${integer.format(profile.estimatedCredits)} créditos previstos; acima da cota média de ${integer.format(availablePerProject)}.`);
-  document.getElementById('creditCoverageStatus')?.classList.toggle('warning', !covered);
+  const remainingCredits = Math.max(0, availablePerProject - profile.estimatedCredits);
+  const divisionExplanation = `${integer.format(calc.monthlyHiggsCredits)} cr mensais ÷ ${integer.format(calc.projectsMonth)} ${calc.projectsMonth === 1 ? 'projeto' : 'projetos'}`;
+  setText('technologyCostNote', calc.excessCreditProvisionBrl > 0 ? `${precise.format(calc.subscriptionsAllocated)} de assinaturas + ${precise.format(calc.excessCreditProvisionBrl)} reservados para créditos acima da cota.` : `${precise.format(calc.subscriptionsAllocated)} em assinaturas mensais alocadas; sem cobrança duplicada dos créditos incluídos.`);
+  setText('creditCoverageStatus', covered ? `Cota suficiente: este projeto usa ${integer.format(profile.estimatedCredits)} cr dos ${integer.format(availablePerProject)} cr planejados (${divisionExplanation}). Restam ${integer.format(remainingCredits)} cr.` : `Cota insuficiente: este projeto precisa de ${integer.format(profile.estimatedCredits)} cr, mas tem ${integer.format(availablePerProject)} cr planejados (${divisionExplanation}). Faltam ${integer.format(Math.ceil(calc.excessCredits))} cr. ${extraCreditRecommendation(calc)}`);
+  document.getElementById('technologyProjectCard')?.classList.toggle('is-over-quota', !covered);
   setText('finalPrice', brl.format(calc.finalPrice));
   setText('quoteProject', state.project || 'Projeto sem nome');
   setText('quoteClient', state.client || 'Cliente não informado');
@@ -298,7 +330,7 @@ function render(renderTeamCards = true) {
   setText('breakContingency', brl.format(calc.contingencyValue));
   setText('productionPrice', brl.format(calc.productionPrice));
   setText('commercialExtras', brl.format(calc.finalPrice - calc.productionPrice));
-  setText('breakCredits', `${integer.format(profile.estimatedCredits)} créditos · ${profile.totalDuration}s · ${state.scenes.length} cenas`);
+  setText('breakCredits', `${integer.format(profile.estimatedCredits)} cr usados · cota de ${integer.format(calc.plannedCreditsPerProject)} cr${calc.excessCredits ? ` · excesso de ${integer.format(Math.ceil(calc.excessCredits))} cr provisionado` : ''}`);
   const strategyNames = { seedance20: 'Seedance 2.0', seedance25: 'Seedance 2.5', mixed: 'Seedance 2.0 + 2.5' };
   const modelBreakdown = document.getElementById('modelBreakdown');
   if (modelBreakdown) modelBreakdown.innerHTML = `<header><span>${state.modelStrategy === 'auto' ? 'ESTRATÉGIA AUTOMÁTICA' : 'ESTRATÉGIA MANUAL'}</span><b>${strategyNames[profile.modelStrategy]}</b><small>${state.modelStrategy !== 'auto' ? `Escolha manual aplicada. A recomendação automática seria ${strategyNames[profile.automaticModelStrategy]}.` : state.realism === 'photoreal' ? 'Fotorrealismo prioriza o Seedance 2.5.' : state.freedom === 'strict' ? 'Direção rígida prioriza o Seedance 2.5.' : state.realism === 'animation' || state.freedom === 'flexible' ? 'Animação ou maior liberdade prioriza o Seedance 2.0.' : 'Briefing equilibrado distribui as cenas entre os dois modelos.'}</small></header>${profile.sceneDetails.map(scene => `<div><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<footer><span>2.0: ${integer.format(profile.modelCredits.seedance20)} cr</span><span>2.5: ${integer.format(profile.modelCredits.seedance25)} cr</span><b>${integer.format(profile.estimatedCredits)} cr · ${precise.format(calc.creditProjectBrl)}</b></footer>`;
@@ -364,5 +396,5 @@ document.querySelector('.breakdown-toggle').addEventListener('click', event => {
 
 renderLeadSelector();
 bindStateFields();
-document.getElementById('deliveryDate').min = new Date().toISOString().slice(0, 10);
+document.getElementById('deliveryDate').min = localDateValue();
 render();

@@ -90,7 +90,7 @@
 
           <div class="credit-estimate">
             <div><span>CRÉDITOS HIGGSFIELD ESTIMADOS</span><strong id="estimatedCredits">—</strong><small id="creditFormula">—</small></div>
-            <div><span>CUSTO ESTIMADO DOS CRÉDITOS</span><strong id="estimatedCreditCost">—</strong><small>Valor convertido com câmbio e proteção configurados na etapa 02.</small></div>
+            <div><span>VALOR DE REFERÊNCIA DOS CRÉDITOS</span><strong id="estimatedCreditCost">—</strong><small>Ajuda a provisionar somente o consumo que ultrapassar a cota já incluída no plano.</small></div>
           </div>
 
           <div class="field-grid two separated-fields">
@@ -118,10 +118,10 @@
             <div class="tech-item" id="foodRow"><span class="tech-logo food">A</span><div><b>Reserva de alimentação</b><small id="foodStatus">R$ 250/mês reservados</small></div><label><span>Quando guardar</span><select data-key="foodReserveMode" data-value-type="text"><option value="always" selected>Todos os meses</option><option value="urgent">Somente se urgente</option><option value="off">Não reservar</option></select></label></div>
           </div>
 
-          <div class="field-grid three compact-fields">
-            <label class="field"><span>Cotação do dólar</span><div class="input-prefix"><i>R$</i><input data-key="fx" type="number" min="1" step="0.01" value="5.20" /></div><small>Use a cotação prevista para o pagamento.</small></label>
+          <div class="field-grid two compact-fields technology-cost-grid">
+            <label class="field"><span>Cotação do dólar</span><div class="input-prefix"><i>R$</i><input data-key="fx" type="number" min="1" step="0.01" value="5.20" /></div><small>Use a cotação prevista. Custos em dólar recebem 5% de proteção cambial.</small></label>
             <label class="field"><span>Projetos no mês</span><input data-key="projectsMonth" type="number" min="1" step="1" value="3" /><small>Divide o custo mensal das ferramentas.</small></label>
-            <div class="field read-only"><span>Tecnologia neste projeto</span><strong id="techProject">—</strong><small id="creditCoverageStatus">Já inclui 5% de proteção cambial.</small></div>
+            <div class="field read-only technology-project-card" id="technologyProjectCard"><span>Tecnologia neste projeto</span><strong id="techProject">—</strong><small class="technology-cost-note" id="technologyCostNote">Assinaturas e créditos alocados neste orçamento.</small><small class="credit-coverage-status" id="creditCoverageStatus" role="status">Calculando a cota de créditos…</small></div>
           </div>
 
           <div class="section-label separated"><span>MODELOS E CRÉDITOS</span><p>Detalhamento por cena usando a tabela interna configurada.</p></div>
@@ -189,7 +189,7 @@
 
           <div class="lead-card">
             <div class="section-label"><span>COMISSÃO COMERCIAL</span><p>Identifique quem trouxe o lead deste projeto.</p></div>
-            <div class="field-grid two">
+            <div class="field-grid two lead-fields">
               <label class="field"><span>Responsável pelo lead</span><select id="leadMember" data-key="leadMemberId"></select><small>Escolha o integrante que originou a oportunidade. Selecione “Sem comissão” quando não houver responsável.</small></label>
               <label class="field"><span>Percentual de comissão</span><div class="input-suffix"><input data-key="commission" type="number" min="0" max="30" value="5" /><i>%</i></div><small>Percentual calculado sobre o valor final do orçamento e pago ao responsável pelo lead.</small></label>
             </div>
