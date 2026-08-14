@@ -41,3 +41,7 @@ Abra `index.html` no navegador. Os rascunhos ficam salvos apenas no próprio dis
 - Cada integrante recebe pelo trabalho realizado, calculado por horas × valor/hora.
 - A comissão comercial é paga somente ao integrante selecionado como responsável pelo lead.
 - Depois dos custos, impostos e comissão, todo o resultado líquido permanece no caixa da Cria Frames.
+- A etapa 04 gera dois documentos A4 no papel timbrado da Cria Frames: um orçamento interno detalhado e uma proposta externa para o cliente.
+- O orçamento interno apresenta a memória completa de custos, tecnologia, créditos, percentuais, pagamentos e resultado.
+- A proposta externa não expõe impostos, margem, comissão ou custos operacionais. O valor final é distribuído entre as horas profissionais, produzindo valores/hora comerciais superiores aos valores internos.
+- Cada documento possui seu próprio botão de impressão e pode ser salvo como PDF pelo diálogo do navegador.

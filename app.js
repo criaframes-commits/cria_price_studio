@@ -38,6 +38,7 @@ const state = {
   freedom: 'balanced',
   modelStrategy: 'auto',
   complexityOverride: 'auto',
+  budgetView: 'internal',
   higgsExtra: 0,
   foodReserveMode: 'always',
   rulesVersion: CURRENT_RULES_VERSION,
@@ -84,6 +85,7 @@ if (!['standard', 'high', 'cinema'].includes(state.quality)) state.quality = 'hi
 if (!['flexible', 'balanced', 'strict'].includes(state.freedom)) state.freedom = 'balanced';
 if (!['auto', 'seedance20', 'mixed', 'seedance25'].includes(state.modelStrategy)) state.modelStrategy = 'auto';
 if (!['auto', 'low', 'medium', 'high'].includes(state.complexityOverride)) state.complexityOverride = 'auto';
+if (!['internal', 'external'].includes(state.budgetView)) state.budgetView = 'internal';
 if (!Object.prototype.hasOwnProperty.call(EXTRA_CREDIT_PACKS, number(state.higgsExtra))) state.higgsExtra = 0;
 if (!['always', 'urgent', 'off'].includes(state.foodReserveMode)) state.foodReserveMode = 'always';
 
@@ -166,8 +168,11 @@ function calculate() {
   const productionPrice = denominator > 0.05 ? protectedCost / denominator : 0;
   const withRights = productionPrice * number(state.rights);
   const finalPrice = withRights * (1 + profile.urgency / 100);
+  const rightsValue = withRights - productionPrice;
+  const urgencyValue = finalPrice - withRights;
   const commissionValue = finalPrice * effectiveCommission / 100;
-  const deductions = finalPrice * number(state.taxes) / 100 + commissionValue;
+  const taxValue = finalPrice * number(state.taxes) / 100;
+  const deductions = taxValue + commissionValue;
   const result = finalPrice - deductions - protectedCost;
   const realMargin = finalPrice ? result / finalPrice * 100 : 0;
   const team = state.team.map(member => {
@@ -175,7 +180,12 @@ function calculate() {
     const commercialCommission = leadMember && member.id === leadMember.id ? commissionValue : 0;
     return { ...member, work, commercialCommission, total: work + commercialCommission };
   });
-  return { profile, labor, projectsMonth, extraPackUsd, extraCredits, monthlyHiggsCredits, plannedCreditsPerProject, excessCredits, creditUsd, higgsProjectUsd, creditProjectBrl, higgsExtraMonthlyBrl, higgsMonthlyBrl, higgsAllocated, chatProjectBrl, claudeProjectBrl, subscriptionsAllocated, excessCreditProvisionBrl, technology, monthlyFoodReserve, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, finalPrice, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team };
+  const clientRateMultiplier = labor > 0 ? finalPrice / labor : 1;
+  const externalTeam = state.team.map(member => {
+    const clientRate = number(member.rate) * clientRateMultiplier;
+    return { ...member, clientRate, clientTotal: number(member.hours) * clientRate };
+  });
+  return { profile, labor, projectsMonth, extraPackUsd, extraCredits, monthlyHiggsCredits, plannedCreditsPerProject, excessCredits, creditUsd, higgsProjectUsd, creditProjectBrl, higgsExtraMonthlyBrl, higgsMonthlyBrl, higgsAllocated, chatProjectBrl, claudeProjectBrl, subscriptionsAllocated, excessCreditProvisionBrl, technology, monthlyFoodReserve, overtimeFood, baseCost, contingencyValue, protectedCost, productionPrice, withRights, rightsValue, urgencyValue, finalPrice, taxValue, deductions, result, realMargin, companyValue: result, commissionValue, leadMember, team, clientRateMultiplier, externalTeam };
 }
 
 function extraCreditRecommendation(calc) {
@@ -290,6 +300,136 @@ function renderTeam() {
   }));
 }
 
+function serviceDescription(role) {
+  const normalized = String(role || '').toLowerCase();
+  if (normalized.includes('ti')) return 'Pré-produção, pesquisa, planejamento técnico e operação dos fluxos de inteligência artificial.';
+  if (normalized.includes('pré-produção')) return 'Pesquisa, referências, planejamento, roteiro e preparação das etapas de produção.';
+  if (normalized.includes('comercial') || normalized.includes('financeiro')) return 'Atendimento, gestão comercial, organização financeira e acompanhamento do projeto.';
+  if (normalized.includes('direção visual') || normalized.includes('produção')) return 'Direção visual, desenvolvimento estético, produção e acompanhamento da execução audiovisual.';
+  return `Execução das atividades de ${role || 'produção audiovisual'} previstas para o projeto.`;
+}
+
+function formatDeliveryDate() {
+  const delivery = new Date(`${state.deliveryDate}T12:00:00`);
+  return Number.isNaN(delivery.getTime()) ? 'A definir' : delivery.toLocaleDateString('pt-BR');
+}
+
+function renderDocumentRows(id, rows) {
+  const container = document.getElementById(id);
+  if (!container) return;
+  container.innerHTML = rows.map(row => `<div class="document-row${row.emphasis ? ' is-emphasis' : ''}"><span>${escapeHtml(row.label)}${row.detail ? `<small>${escapeHtml(row.detail)}</small>` : ''}</span>${row.middle ? `<b>${escapeHtml(row.middle)}</b>` : ''}<strong>${escapeHtml(row.value)}</strong></div>`).join('');
+}
+
+function renderBudgetDocuments(calc) {
+  const profile = calc.profile;
+  const complexityNames = { low: 'Baixa', medium: 'Média', high: 'Alta' };
+  const realismNames = { animation: 'Animação', hybrid: 'Híbrido', photoreal: 'Fotorrealista' };
+  const strategyNames = { seedance20: 'Seedance 2.0', seedance25: 'Seedance 2.5', mixed: 'Seedance 2.0 + 2.5' };
+  const rightsNames = { 1: 'Digital orgânico no Brasil', 1.15: 'Mídia paga digital no Brasil', 1.35: 'Campanha nacional multiplataforma', 1.6: 'Uso amplo ou exclusividade' };
+  const urgencyName = profile.urgencyKey === 'very' ? 'Muito urgente' : profile.urgencyKey === 'urgent' ? 'Urgente' : 'Prazo normal';
+  const urgencyDetail = profile.urgencyKey === 'very' ? `${profile.days} dias disponíveis · entrega em até 1 semana` : profile.urgencyKey === 'urgent' ? `${profile.days} dias disponíveis · entrega em até 2 semanas` : `${profile.days} dias disponíveis · planejamento acima de 2 semanas`;
+  const urgencyImpact = profile.urgency ? `O valor final já contempla o adicional de ${profile.urgency}% referente à mobilização para este prazo.` : 'Sem adicional de urgência; execução dentro do prazo regular de produção.';
+  const delivery = formatDeliveryDate();
+  const project = state.project || 'Projeto sem nome';
+  const client = state.client || 'Cliente não informado';
+  const deliverables = state.deliverables || 'Entregáveis conforme escopo definido com o cliente.';
+
+  ['internalProject', 'externalProject'].forEach(id => setText(id, project));
+  ['internalClient', 'externalClient'].forEach(id => setText(id, client));
+  ['internalDelivery', 'externalDelivery'].forEach(id => setText(id, delivery));
+  ['internalUrgency', 'externalUrgency'].forEach(id => setText(id, urgencyName));
+  ['internalDeliverables', 'externalDeliverables'].forEach(id => setText(id, deliverables));
+  setText('externalUrgencyDetail', urgencyDetail);
+  setText('externalUrgencyImpact', urgencyImpact);
+  setText('externalFinalPrice', brl.format(calc.finalPrice));
+  document.getElementById('externalUrgencyCard')?.setAttribute('data-urgency', profile.urgencyKey);
+
+  const specifications = document.getElementById('internalSpecifications');
+  if (specifications) specifications.innerHTML = [
+    ['Duração total', `${profile.totalDuration}s`],
+    ['Cenas', `${state.scenes.length} · 15s a 30s cada`],
+    ['Realismo', realismNames[state.realism]],
+    ['Qualidade', profile.requestedResolution],
+    ['Complexidade', complexityNames[profile.complexity]],
+    ['Modelos', strategyNames[profile.modelStrategy]],
+    ['Tentativas previstas', `${profile.attempts} por geração`],
+    ['Direitos de uso', rightsNames[number(state.rights)] || 'Conforme contrato'],
+  ].map(([label, value]) => `<div><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`).join('');
+
+  const teamTable = document.getElementById('internalTeamTable');
+  if (teamTable) teamTable.innerHTML = `<div class="document-row document-table-head"><span>Profissional e serviço</span><b>Horas · valor/hora</b><strong>Custo real</strong></div>${calc.team.map(member => `<div class="document-row"><span>${escapeHtml(member.name)}<small>${escapeHtml(member.role)} · ${escapeHtml(serviceDescription(member.role))}</small></span><b>${integer.format(member.hours)}h · ${precise.format(member.rate)}/h</b><strong>${precise.format(member.work)}</strong></div>`).join('')}<div class="document-row is-emphasis"><span>Total da equipe</span><strong>${precise.format(calc.labor)}</strong></div>`;
+
+  renderDocumentRows('internalCostTable', [
+    { label: 'Trabalho da equipe', value: precise.format(calc.labor) },
+    { label: 'Tecnologia alocada', detail: `${integer.format(profile.estimatedCredits)} cr previstos`, value: precise.format(calc.technology) },
+    { label: 'Terceiros e fornecedores', value: precise.format(number(state.thirdParty)) },
+    { label: 'Outras despesas específicas', value: precise.format(number(state.otherCosts)) },
+    { label: 'Reserva de alimentação', value: precise.format(calc.overtimeFood) },
+    { label: `Contingência · ${pct(state.contingency)}`, value: precise.format(calc.contingencyValue) },
+    { label: 'Custo protegido', value: precise.format(calc.protectedCost), emphasis: true },
+  ]);
+
+  renderDocumentRows('internalCommercialTable', [
+    { label: 'Preço-base de produção', value: precise.format(calc.productionPrice) },
+    { label: `Direitos de uso · ${pct((number(state.rights) - 1) * 100)}`, value: precise.format(calc.rightsValue) },
+    { label: `Urgência · ${pct(profile.urgency)}`, value: precise.format(calc.urgencyValue) },
+    { label: `Impostos previstos · ${pct(state.taxes)}`, value: precise.format(calc.taxValue) },
+    { label: `Comissão comercial · ${calc.leadMember ? calc.leadMember.name : 'sem responsável'}`, value: precise.format(calc.commissionValue) },
+    { label: 'Valor final ao cliente', value: precise.format(calc.finalPrice), emphasis: true },
+  ]);
+
+  const creditTable = document.getElementById('internalCreditTable');
+  if (creditTable) creditTable.innerHTML = `<div class="document-row document-table-head"><span>Cena e configuração</span><b>Modelo</b><strong>Créditos</strong></div>${profile.sceneDetails.map(scene => `<div class="document-row"><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<div class="document-row is-emphasis"><span>Total previsto</span><b>Cota: ${integer.format(calc.plannedCreditsPerProject)} cr</b><strong>${integer.format(profile.estimatedCredits)} cr</strong></div>`;
+
+  const distribution = document.getElementById('distributionList');
+  if (distribution) distribution.innerHTML = calc.team.map(member => `<div class="document-row"><span>${escapeHtml(member.name)}<small>${precise.format(member.work)} pelo trabalho${member.commercialCommission ? ` + ${precise.format(member.commercialCommission)} de comissão` : ''}</small></span><b>${member.commercialCommission ? 'RESPONSÁVEL PELO LEAD' : escapeHtml(member.role)}</b><strong>${precise.format(member.total)}</strong></div>`).join('');
+
+  const externalServices = document.getElementById('externalServiceTable');
+  if (externalServices) externalServices.innerHTML = `<div class="document-row document-table-head"><span>Descrição do serviço</span><b>Horas · valor/hora comercial</b><strong>Subtotal</strong></div>${calc.externalTeam.map(member => `<div class="document-row"><span>${escapeHtml(member.role)}<small>${escapeHtml(serviceDescription(member.role))} Responsável: ${escapeHtml(member.name)}.</small></span><b>${integer.format(member.hours)}h · ${precise.format(member.clientRate)}/h</b><strong>${precise.format(member.clientTotal)}</strong></div>`).join('')}`;
+
+  const relatedItems = [
+    { label: 'Produção audiovisual com inteligência artificial', detail: `${state.scenes.length} cenas · ${profile.totalDuration}s no total · qualidade ${profile.requestedResolution}` },
+    { label: 'Geração e processamento visual', detail: `${strategyNames[profile.modelStrategy]} · ${integer.format(profile.estimatedCredits)} créditos previstos` },
+    { label: 'Planejamento e rodadas de geração', detail: `${profile.attempts} tentativa(s) previstas por geração · complexidade ${complexityNames[profile.complexity].toLowerCase()}` },
+    { label: 'Licenciamento e uso', detail: rightsNames[number(state.rights)] || 'Conforme contrato' },
+  ];
+  if (number(state.thirdParty) > 0) relatedItems.push({ label: 'Fornecedores especializados', detail: 'Contratações externas necessárias para o escopo aprovado' });
+  if (number(state.otherCosts) > 0) relatedItems.push({ label: 'Recursos específicos de produção', detail: 'Despesas diretamente relacionadas à execução do serviço' });
+  renderDocumentRows('externalAdditionalCosts', relatedItems.map(item => ({ ...item, value: 'Incluído' })));
+  setText('externalConditions', `${deliverables} Entrega prevista para ${delivery}. ${urgencyImpact} O valor apresentado é fechado para o escopo descrito; mudanças de escopo são recalculadas antes da execução.`);
+  setBudgetView(state.budgetView, false);
+}
+
+function setBudgetView(view, persist = true) {
+  state.budgetView = view === 'external' ? 'external' : 'internal';
+  document.querySelectorAll('[data-budget-view]').forEach(button => {
+    const active = button.dataset.budgetView === state.budgetView;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-budget-document]').forEach(documentSection => {
+    const active = documentSection.dataset.budgetDocument === state.budgetView;
+    documentSection.classList.toggle('is-active', active);
+    documentSection.hidden = !active;
+  });
+  if (persist) localStorage.setItem('cria-price-studio-v2', JSON.stringify({ ...state, step: undefined, urgency: undefined }));
+}
+
+function printBudget(type) {
+  const printType = type === 'external' ? 'external' : 'internal';
+  const previousTitle = document.title;
+  document.body.classList.remove('print-internal', 'print-external');
+  document.body.classList.add(`print-${printType}`);
+  document.title = `${printType === 'internal' ? 'Orçamento interno' : 'Proposta comercial'} - ${state.project || 'Cria Frames'}`;
+  const clean = () => {
+    document.body.classList.remove('print-internal', 'print-external');
+    document.title = previousTitle;
+    window.removeEventListener('afterprint', clean);
+  };
+  window.addEventListener('afterprint', clean);
+  window.print();
+}
+
 function render(renderTeamCards = true) {
   const calc = calculate();
   const profile = calc.profile;
@@ -313,24 +453,12 @@ function render(renderTeamCards = true) {
   setText('creditCoverageStatus', covered ? `Cota suficiente: este projeto usa ${integer.format(profile.estimatedCredits)} cr dos ${integer.format(availablePerProject)} cr planejados (${divisionExplanation}). Restam ${integer.format(remainingCredits)} cr.` : `Cota insuficiente: este projeto precisa de ${integer.format(profile.estimatedCredits)} cr, mas tem ${integer.format(availablePerProject)} cr planejados (${divisionExplanation}). Faltam ${integer.format(Math.ceil(calc.excessCredits))} cr. ${extraCreditRecommendation(calc)}`);
   document.getElementById('technologyProjectCard')?.classList.toggle('is-over-quota', !covered);
   setText('finalPrice', brl.format(calc.finalPrice));
-  setText('quoteProject', state.project || 'Projeto sem nome');
-  setText('quoteClient', state.client || 'Cliente não informado');
-  setText('pathPrice', brl.format(calc.finalPrice));
-  setText('pathDeductions', brl.format(calc.deductions));
   setText('pathCost', brl.format(calc.protectedCost));
   setText('pathResult', brl.format(calc.result));
   setText('realMargin', `${pct(calc.realMargin)} de margem`);
   setText('companyValue', brl.format(calc.companyValue));
   setText('leadCommissionValue', brl.format(calc.commissionValue));
   setText('leadCommissionRecipient', calc.leadMember ? `Pago a ${calc.leadMember.name}` : 'Nenhum responsável selecionado');
-  setText('laborCost', brl.format(calc.labor));
-  setText('breakTech', precise.format(calc.technology));
-  setText('breakOthers', brl.format(number(state.thirdParty) + number(state.otherCosts)));
-  setText('breakFood', brl.format(calc.overtimeFood));
-  setText('breakContingency', brl.format(calc.contingencyValue));
-  setText('productionPrice', brl.format(calc.productionPrice));
-  setText('commercialExtras', brl.format(calc.finalPrice - calc.productionPrice));
-  setText('breakCredits', `${integer.format(profile.estimatedCredits)} cr usados · cota de ${integer.format(calc.plannedCreditsPerProject)} cr${calc.excessCredits ? ` · excesso de ${integer.format(Math.ceil(calc.excessCredits))} cr provisionado` : ''}`);
   const strategyNames = { seedance20: 'Seedance 2.0', seedance25: 'Seedance 2.5', mixed: 'Seedance 2.0 + 2.5' };
   const modelBreakdown = document.getElementById('modelBreakdown');
   if (modelBreakdown) modelBreakdown.innerHTML = `<header><span>${state.modelStrategy === 'auto' ? 'ESTRATÉGIA AUTOMÁTICA' : 'ESTRATÉGIA MANUAL'}</span><b>${strategyNames[profile.modelStrategy]}</b><small>${state.modelStrategy !== 'auto' ? `Escolha manual aplicada. A recomendação automática seria ${strategyNames[profile.automaticModelStrategy]}.` : state.realism === 'photoreal' ? 'Fotorrealismo prioriza o Seedance 2.5.' : state.freedom === 'strict' ? 'Direção rígida prioriza o Seedance 2.5.' : state.realism === 'animation' || state.freedom === 'flexible' ? 'Animação ou maior liberdade prioriza o Seedance 2.0.' : 'Briefing equilibrado distribui as cenas entre os dois modelos.'}</small></header>${profile.sceneDetails.map(scene => `<div><span>Cena ${scene.number}<small>${scene.duration}s · ${scene.resolution} · ${scene.generations} geração(ões) × ${scene.attempts} tentativa(s)</small></span><b>${scene.model === 'seedance20' ? 'Seedance 2.0' : 'Seedance 2.5'}</b><strong>${integer.format(scene.credits)} cr</strong></div>`).join('')}<footer><span>2.0: ${integer.format(profile.modelCredits.seedance20)} cr</span><span>2.5: ${integer.format(profile.modelCredits.seedance25)} cr</span><b>${integer.format(profile.estimatedCredits)} cr · ${precise.format(calc.creditProjectBrl)}</b></footer>`;
@@ -338,7 +466,7 @@ function render(renderTeamCards = true) {
   const valid = calc.finalPrice > 0 && calc.result >= 0;
   health.textContent = valid ? 'MARGEM PROTEGIDA' : 'REVISAR PERCENTUAIS';
   health.classList.toggle('warning', !valid);
-  document.getElementById('distributionList').innerHTML = calc.team.map(member => `<div class="distribution-row"><span>${escapeHtml(member.name)}<small>${brl.format(member.work)} pelo trabalho${member.commercialCommission ? ` + ${brl.format(member.commercialCommission)} de comissão` : ''}</small></span>${member.commercialCommission ? '<b>LEAD</b>' : '<b>—</b>'}<strong>${brl.format(member.total)}</strong></div>`).join('');
+  renderBudgetDocuments(calc);
   renderLeadSelector();
   renderProject();
   if (renderTeamCards) renderTeam();
@@ -384,17 +512,13 @@ document.querySelectorAll('[data-freedom]').forEach(button => button.addEventLis
   state.freedom = button.dataset.freedom;
   persistAndRender();
 }));
-document.querySelector('.breakdown-toggle').addEventListener('click', event => {
-  const button = event.currentTarget;
-  const body = document.querySelector('.breakdown-body');
-  const open = body.hidden;
-  body.hidden = !open;
-  button.setAttribute('aria-expanded', String(open));
-  button.querySelector('span').textContent = open ? '−' : '+';
-});
-['printBudget', 'printBudgetBottom'].forEach(id => document.getElementById(id).addEventListener('click', () => window.print()));
+document.querySelectorAll('[data-budget-view]').forEach(button => button.addEventListener('click', () => setBudgetView(button.dataset.budgetView)));
+document.getElementById('printInternalBudget').addEventListener('click', () => printBudget('internal'));
+document.getElementById('printExternalBudget').addEventListener('click', () => printBudget('external'));
 
 renderLeadSelector();
 bindStateFields();
 document.getElementById('deliveryDate').min = localDateValue();
 render();
+const printPreview = new URLSearchParams(window.location.search).get('print');
+if (['internal', 'external'].includes(printPreview)) document.body.classList.add(`print-${printPreview}`);

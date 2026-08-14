@@ -28,6 +28,8 @@ close(calc.deductions, calc.finalPrice * 0.11, 'Impostos e comissão');
 close(calc.result, calc.finalPrice - calc.deductions - calc.protectedCost, 'Resultado líquido');
 close(calc.team.reduce((sum, member) => sum + member.work, 0), calc.labor, 'Pagamentos pelo trabalho');
 close(calc.team.reduce((sum, member) => sum + member.total, 0), calc.labor + calc.commissionValue, 'Trabalho e comissão da equipe');
+close(calc.externalTeam.reduce((sum, member) => sum + member.clientTotal, 0), calc.finalPrice, 'Serviços externos totalizam o valor final');
+assert(calc.externalTeam.every(member => member.clientRate > member.rate), 'Valores/hora comerciais são maiores que os internos');
 close(calc.realMargin, 30, 'Margem-alvo sem adicionais comerciais');
 
 state.projectsMonth = 3;

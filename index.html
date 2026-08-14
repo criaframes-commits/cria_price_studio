@@ -7,7 +7,7 @@
     <meta name="description" content="Orçamentos e divisão de resultados da Cria Frames." />
     <title>Cria Price Studio</title>
     <link rel="icon" href="public/cria-frames-logo.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260813-2" />
+    <link rel="stylesheet" href="styles.css?v=20260813-3" />
   </head>
   <body>
     <header class="topbar">
@@ -201,59 +201,78 @@
 
         <section class="panel" data-panel="4">
           <header class="panel-head result-title">
-            <div><span>ETAPA 04</span><h2>ORÇAMENTO PRONTO</h2><p>Confira primeiro o preço para o cliente. Depois veja como o resultado é dividido.</p></div>
+            <div><span>ETAPA 04</span><h2>DOIS ORÇAMENTOS PRONTOS</h2><p>Use o documento interno para a equipe e a versão externa para apresentar ao cliente.</p></div>
             <div class="status-pill" id="healthStatus">MARGEM PROTEGIDA</div>
           </header>
 
-          <article class="quote-card">
-            <div class="quote-main">
-              <span>VALOR RECOMENDADO</span>
-              <h3 id="finalPrice">—</h3>
-              <div class="quote-identification">
-                <div><small>PROJETO</small><b id="quoteProject">—</b></div>
-                <div><small>CLIENTE</small><b id="quoteClient">—</b></div>
+          <div class="budget-selector" role="tablist" aria-label="Escolher orçamento">
+            <button type="button" class="budget-option is-active" data-budget-view="internal" role="tab" aria-selected="true"><span>USO DA EQUIPE</span><b>Orçamento interno</b><small>Custos, cálculos, créditos, comissão e resultado.</small></button>
+            <button type="button" class="budget-option" data-budget-view="external" role="tab" aria-selected="false"><span>ENVIO AO CLIENTE</span><b>Orçamento externo</b><small>Serviços, horas, valores comerciais e prazo.</small></button>
+          </div>
+
+          <section class="budget-document is-active" data-budget-document="internal" role="tabpanel">
+            <div class="budget-document-actions"><div><b>Orçamento interno</b><small>Documento completo e confidencial para a equipe.</small></div><button class="button button-blue" id="printInternalBudget">Imprimir / salvar PDF interno</button></div>
+
+            <article class="letterhead-sheet">
+              <img class="letterhead-background" src="public/papel-timbrado.png" alt="" />
+              <div class="letterhead-content">
+                <div class="letterhead-spacer" aria-hidden="true"></div>
+                <div class="document-heading"><span>DOCUMENTO INTERNO · CONFIDENCIAL</span><h3 id="internalProject">—</h3><p id="internalDeliverables">—</p></div>
+                <div class="document-meta">
+                  <div><small>CLIENTE</small><b id="internalClient">—</b></div>
+                  <div><small>ENTREGA</small><b id="internalDelivery">—</b></div>
+                  <div><small>PRAZO</small><b id="internalUrgency">—</b></div>
+                </div>
+                <div class="document-summary internal-summary">
+                  <div><small>VALOR FINAL</small><strong id="finalPrice">—</strong></div>
+                  <div><small>CUSTO PROTEGIDO</small><strong id="pathCost">—</strong></div>
+                  <div><small>RESULTADO DA CRIA</small><strong id="pathResult">—</strong></div>
+                  <div><small>MARGEM REAL</small><strong id="realMargin">—</strong></div>
+                </div>
+                <div class="document-section"><header><span>01</span><div><b>Escopo calculado</b><small>Características usadas na formação de custos.</small></div></header><div class="specification-grid" id="internalSpecifications"></div></div>
+                <div class="document-section"><header><span>02</span><div><b>Horas e custo real da equipe</b><small>Valores internos antes dos adicionais comerciais.</small></div></header><div class="document-table team-budget-table" id="internalTeamTable"></div></div>
               </div>
-            </div>
-            <div class="quote-actions"><button class="button button-white" id="printBudget">Imprimir / salvar PDF</button><button class="button button-outline-white" data-go="1">Editar dados</button></div>
-          </article>
-
-          <div class="section-label"><span>PARA ONDE VAI O DINHEIRO?</span><p>Do valor pago pelo cliente até o resultado líquido.</p></div>
-          <div class="money-path">
-            <div><span>01</span><small>Cliente paga</small><strong id="pathPrice">—</strong></div><i>−</i>
-            <div><span>02</span><small>Impostos e comissão</small><strong id="pathDeductions">—</strong></div><i>−</i>
-            <div><span>03</span><small>Custo protegido</small><strong id="pathCost">—</strong></div><i>=</i>
-            <div class="accent"><span>04</span><small>Resultado do projeto</small><strong id="pathResult">—</strong></div>
-          </div>
-
-          <div class="result-grid">
-            <article class="result-box">
-              <header><div><span>DESTINO DO RESULTADO</span><h3>Caixa da Cria Frames</h3></div><b id="realMargin">—</b></header>
-              <div class="company-result"><small>RESULTADO LÍQUIDO DO PROJETO</small><strong id="companyValue">—</strong><span>100% destinado à produtora</span></div>
-              <p>O pagamento do trabalho, os impostos e a comissão comercial já foram descontados antes deste valor.</p>
             </article>
 
-            <article class="result-box">
-              <header><div><span>PAGAMENTOS DA EQUIPE</span><h3>Trabalho e comissão</h3></div></header>
-              <div id="distributionList" class="distribution-list"></div>
-              <p>Cada pessoa recebe pelo trabalho realizado. Somente o responsável pelo lead recebe também a comissão comercial.</p>
+            <article class="letterhead-sheet">
+              <img class="letterhead-background" src="public/papel-timbrado.png" alt="" />
+              <div class="letterhead-content">
+                <div class="letterhead-spacer" aria-hidden="true"></div>
+                <div class="document-heading compact"><span>MEMÓRIA COMPLETA DO ORÇAMENTO</span><h3>Custos, tecnologia e resultado</h3></div>
+                <div class="internal-detail-grid">
+                  <div class="document-section"><header><span>03</span><div><b>Custos protegidos</b><small>Tudo que precisa ser coberto pelo projeto.</small></div></header><div class="document-table" id="internalCostTable"></div></div>
+                  <div class="document-section"><header><span>04</span><div><b>Formação comercial</b><small>Valores posteriores ao custo de produção.</small></div></header><div class="document-table" id="internalCommercialTable"></div></div>
+                </div>
+                <div class="document-section"><header><span>05</span><div><b>Uso de IA por cena</b><small>Modelo, resolução, tentativas e créditos previstos.</small></div></header><div class="document-table credit-budget-table" id="internalCreditTable"></div></div>
+                <div class="document-section"><header><span>06</span><div><b>Pagamentos da equipe</b><small>Trabalho realizado e eventual comissão pelo lead.</small></div></header><div id="distributionList" class="document-table"></div></div>
+                <div class="document-total internal-total"><span>RESULTADO LÍQUIDO DESTINADO AO CAIXA DA CRIA FRAMES</span><strong id="companyValue">—</strong></div>
+              </div>
             </article>
-          </div>
+          </section>
 
-          <div class="breakdown">
-            <button class="breakdown-toggle" aria-expanded="false">Ver memória completa do cálculo <span>+</span></button>
-            <div class="breakdown-body" hidden>
-              <div><span>Custo do trabalho da equipe</span><b id="laborCost">—</b></div>
-              <div><span>Tecnologia alocada</span><b id="breakTech">—</b></div>
-              <div><span>Uso estimado do Higgsfield</span><b id="breakCredits">—</b></div>
-              <div><span>Terceiros e outras despesas</span><b id="breakOthers">—</b></div>
-              <div><span>Reserva de alimentação alocada</span><b id="breakFood">—</b></div>
-              <div><span>Contingência</span><b id="breakContingency">—</b></div>
-              <div><span>Preço antes dos adicionais comerciais</span><b id="productionPrice">—</b></div>
-              <div><span>Direitos de uso e urgência</span><b id="commercialExtras">—</b></div>
-            </div>
-          </div>
+          <section class="budget-document" data-budget-document="external" role="tabpanel" hidden>
+            <div class="budget-document-actions"><div><b>Orçamento para o cliente</b><small>Versão comercial sem impostos, margem ou custos operacionais expostos.</small></div><button class="button button-blue" id="printExternalBudget">Imprimir / salvar PDF do cliente</button></div>
 
-          <div class="panel-actions"><button class="button button-light" data-go="3">← Revisar equipe</button><button class="button button-dark" id="printBudgetBottom">Imprimir orçamento</button></div>
+            <article class="letterhead-sheet">
+              <img class="letterhead-background" src="public/papel-timbrado.png" alt="" />
+              <div class="letterhead-content">
+                <div class="letterhead-spacer" aria-hidden="true"></div>
+                <div class="document-heading"><span>PROPOSTA COMERCIAL</span><h3 id="externalProject">—</h3><p id="externalDeliverables">—</p></div>
+                <div class="document-meta">
+                  <div><small>CLIENTE</small><b id="externalClient">—</b></div>
+                  <div><small>ENTREGA PREVISTA</small><b id="externalDelivery">—</b></div>
+                  <div><small>CONDIÇÃO DO PRAZO</small><b id="externalUrgency">—</b></div>
+                </div>
+                <div class="urgency-document-card" id="externalUrgencyCard"><span>PLANEJAMENTO DE ENTREGA</span><b id="externalUrgencyDetail">—</b><small id="externalUrgencyImpact">—</small></div>
+                <div class="document-section"><header><span>01</span><div><b>Serviços profissionais</b><small>Horas estimadas e valores comerciais por integrante.</small></div></header><div class="document-table external-service-table" id="externalServiceTable"></div></div>
+                <div class="document-section external-additional-section"><header><span>02</span><div><b>Recursos ligados ao serviço</b><small>Produção, geração e recursos específicos desta entrega.</small></div></header><div class="document-table" id="externalAdditionalCosts"></div></div>
+                <div class="document-total client-total"><span>VALOR FINAL DO PROJETO</span><strong id="externalFinalPrice">—</strong><small>Valor fechado conforme escopo, horas e prazo descritos neste documento.</small></div>
+                <div class="client-conditions"><b>Condições consideradas</b><p id="externalConditions">—</p></div>
+              </div>
+            </article>
+          </section>
+
+          <div class="panel-actions budget-navigation"><button class="button button-light" data-go="3">← Revisar equipe</button><button class="button button-light" data-go="1">Editar dados do projeto</button></div>
         </section>
       </div>
 
@@ -268,6 +287,7 @@
       </aside>
     </main>
 
+    <img class="print-letterhead" src="public/papel-timbrado.png" alt="" aria-hidden="true" />
     <footer>
       <img src="public/cria-frames-logo.jpeg" alt="" />
       <p>CRIAMOS O IMPOSSÍVEL.<br /><span>PORQUE DOMINAMOS O PROCESSO.</span></p>
